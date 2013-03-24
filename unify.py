@@ -38,7 +38,7 @@ except NameError:
     unicode = str
 
 
-def format_code(source, preferred_quote):
+def format_code(source, preferred_quote="'"):
     """Return source code with quotes unified."""
     sio = io.StringIO(source)
     formatted = ''
