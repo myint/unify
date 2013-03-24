@@ -16,7 +16,7 @@ def version():
 with open('README.rst') as readme:
     core.setup(name='unify',
                version=version(),
-               description='Modifies strings to all use the same'
+               description='Modifies strings to all use the same '
                            '(single/double) quote where possible.',
                long_description=readme.read(),
                license='Expat License',
