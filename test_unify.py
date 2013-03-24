@@ -50,6 +50,11 @@ class TestUnits(unittest.TestCase):
             self.assertEqual('latin-1',
                              unify.detect_encoding(filename))
 
+    def test_format_code(self):
+        self.assertEqual("x = 'abc' \\\n'next'\n",
+                         unify.format_code('x = "abc" \\\n"next"\n',
+                                           preferred_quote="'"))
+
 
 class TestSystem(unittest.TestCase):
 
@@ -68,6 +73,41 @@ if True:
 -    x = "abc"
 +    x = 'abc'
 '''), '\n'.join(output_file.getvalue().split('\n')[2:]))
+
+    def test_in_place(self):
+        with temporary_file('''\
+if True:
+    x = "abc"
+''') as filename:
+            output_file = io.StringIO()
+            unify.main(argv=['my_fake_program', '--in-place', filename],
+                       standard_out=output_file,
+                       standard_error=None)
+            with open(filename) as f:
+                self.assertEqual('''\
+if True:
+    x = 'abc'
+''', f.read())
+
+    def test_ignore_hidden_directories(self):
+        with temporary_directory() as directory:
+            with temporary_directory(prefix='.',
+                                     directory=directory) as inner_directory:
+
+                with temporary_file("""\
+if True:
+    x = "abc"
+""", directory=inner_directory):
+
+                    output_file = io.StringIO()
+                    unify.main(argv=['my_fake_program',
+                                     '--recursive',
+                                     directory],
+                               standard_out=output_file,
+                               standard_error=None)
+                    self.assertEqual(
+                        '',
+                        output_file.getvalue().strip())
 
 
 @contextlib.contextmanager
