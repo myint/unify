@@ -52,7 +52,7 @@ class TestUnits(unittest.TestCase):
 
     def test_format_code(self):
         self.assertEqual("x = 'abc' \\\n'next'\n",
-                         unify.format_code('x = "abc" \\\n"next"\n',
+                         unify.format_code(unicode('x = "abc" \\\n"next"\n'),
                                            preferred_quote="'"))
 
 
