@@ -67,8 +67,8 @@ def format_code(source, preferred_quote):
             formatted += line[last_column:start_column]
 
         if (token_type == tokenize.STRING):
-            formatted += unify_quote(token_string,
-                                     preferred_quote=preferred_quote)
+            formatted += unify_quotes(token_string,
+                                      preferred_quote=preferred_quote)
         else:
             formatted += token_string
 
@@ -80,7 +80,7 @@ def format_code(source, preferred_quote):
     return formatted
 
 
-def unify_quote(token_string, preferred_quote):
+def unify_quotes(token_string, preferred_quote):
     """Return string with quotes changed to preferred_quote if possible."""
     bad_quote = {'"': "'",
                  "'": '"'}[preferred_quote]

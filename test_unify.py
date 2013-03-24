@@ -23,6 +23,28 @@ except NameError:
 
 class TestUnits(unittest.TestCase):
 
+    def test_unify_quotes(self):
+        self.assertEqual("'foo'",
+                         unify.unify_quotes('"foo"',
+                                            preferred_quote="'"))
+
+        self.assertEqual('"foo"',
+                         unify.unify_quotes('"foo"',
+                                            preferred_quote='"'))
+
+        self.assertEqual('"foo"',
+                         unify.unify_quotes("'foo'",
+                                            preferred_quote='"'))
+
+    def test_unify_quotes_should_avoid_some_cases(self):
+        self.assertEqual('''"foo's"''',
+                         unify.unify_quotes('''"foo's"''',
+                                            preferred_quote="'"))
+
+        self.assertEqual('''"""foo"""''',
+                         unify.unify_quotes('''"""foo"""''',
+                                            preferred_quote="'"))
+
     def test_detect_encoding_with_bad_encoding(self):
         with temporary_file('# -*- coding: blah -*-\n') as filename:
             self.assertEqual('latin-1',
