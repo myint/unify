@@ -42,7 +42,6 @@ def format_code(source, preferred_quote):
     """Return source code with quotes unified."""
     sio = io.StringIO(source)
     formatted = ''
-    previous_token_string = ''
     previous_line = ''
     last_row = 0
     last_column = -1
