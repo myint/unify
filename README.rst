@@ -8,7 +8,7 @@ Example
 
 After running::
 
-    $ umify example.py
+    $ unify example.py
 
 this code
 
