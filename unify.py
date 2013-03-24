@@ -29,7 +29,7 @@ import os
 import tokenize
 
 
-__version__ = '0.1'
+__version__ = '0.1.1'
 
 
 try:
