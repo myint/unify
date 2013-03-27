@@ -74,6 +74,16 @@ if True:
 +    x = 'abc'
 '''), '\n'.join(output_file.getvalue().split('\n')[2:]))
 
+    def test_diff_with_empty_file(self):
+        with temporary_file('') as filename:
+            output_file = io.StringIO()
+            unify.main(argv=['my_fake_program', filename],
+                       standard_out=output_file,
+                       standard_error=None)
+            self.assertEqual(
+                '',
+                output_file.getvalue())
+
     def test_in_place(self):
         with temporary_file('''\
 if True:
