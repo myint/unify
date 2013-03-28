@@ -40,7 +40,10 @@ except NameError:
 
 def format_code(source, preferred_quote="'"):
     """Return source code with quotes unified."""
-    sio = io.StringIO(unicode(source))
+    if not source:
+        return source
+
+    sio = io.StringIO(source)
     formatted = ''
     previous_line = ''
     last_row = 0
