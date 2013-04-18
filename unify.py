@@ -182,6 +182,4 @@ def main(argv, standard_out, standard_error):
             try:
                 format_file(name, args=args, standard_out=standard_out)
             except IOError as exception:
-                if exception.errno == errno.EPIPE:
-                    return
-                print(exception, file=standard_error)
+                print(unicode(exception), file=standard_error)

@@ -22,11 +22,16 @@
 # SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """unify utility."""
 
+import signal
 import sys
+
 import unify
 
 
 if __name__ == '__main__':
+    # Exit on broken pipe.
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+
     try:
         sys.exit(unify.main(sys.argv,
                             standard_out=sys.stdout,
