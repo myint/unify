@@ -23,7 +23,6 @@
 
 from __future__ import print_function
 
-import errno
 import io
 import os
 import tokenize
