@@ -39,6 +39,14 @@ except NameError:
 
 def format_code(source, preferred_quote="'"):
     """Return source code with quotes unified."""
+    try:
+        return _format_code(source, preferred_quote)
+    except (tokenize.TokenError, IndentationError):
+        return source
+
+
+def _format_code(source, preferred_quote):
+    """Return source code with quotes unified."""
     if not source:
         return source
 

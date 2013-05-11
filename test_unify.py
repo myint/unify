@@ -55,6 +55,11 @@ class TestUnits(unittest.TestCase):
                          unify.format_code(unicode('x = "abc" \\\n"next"\n'),
                                            preferred_quote="'"))
 
+    def test_format_code_with_syntax_error(self):
+        self.assertEqual('foo("abc"\n',
+                         unify.format_code(unicode('foo("abc"\n'),
+                                           preferred_quote="'"))
+
 
 class TestSystem(unittest.TestCase):
 
