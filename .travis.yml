@@ -5,13 +5,13 @@ python:
     - "3.2"
     - "3.3"
 
-before_install:
-    - pip --quiet install coverage
-
 install:
     - python setup.py --quiet install
 
 script:
     - python test_unify.py
-    - coverage run test_unify.py; true
+
+after_success:
+    - pip install --quiet coverage
+    - coverage run test_unify.py
     - coverage report --show-missing --omit='*/distutils/*'; true
