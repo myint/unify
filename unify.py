@@ -22,6 +22,7 @@
 """Modifies strings to all use the same quote where possible."""
 
 from __future__ import print_function
+from __future__ import unicode_literals
 
 import io
 import os
