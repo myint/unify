@@ -156,7 +156,7 @@ def format_file(filename, args, standard_out):
                 'before/' + filename,
                 'after/' + filename,
                 lineterm='')
-            standard_out.write(unicode('\n').join(list(diff) + ['']))
+            standard_out.write('\n'.join(list(diff) + ['']))
 
 
 def main(argv, standard_out, standard_error):

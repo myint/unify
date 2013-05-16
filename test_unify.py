@@ -2,6 +2,8 @@
 
 """Test suite for unify."""
 
+from __future__ import unicode_literals
+
 import contextlib
 import io
 import tempfile
@@ -13,12 +15,6 @@ except ImportError:
     import unittest
 
 import unify
-
-
-try:
-    unicode
-except NameError:
-    unicode = str
 
 
 class TestUnits(unittest.TestCase):
@@ -52,12 +48,12 @@ class TestUnits(unittest.TestCase):
 
     def test_format_code(self):
         self.assertEqual("x = 'abc' \\\n'next'\n",
-                         unify.format_code(unicode('x = "abc" \\\n"next"\n'),
+                         unify.format_code('x = "abc" \\\n"next"\n',
                                            preferred_quote="'"))
 
     def test_format_code_with_syntax_error(self):
         self.assertEqual('foo("abc"\n',
-                         unify.format_code(unicode('foo("abc"\n'),
+                         unify.format_code('foo("abc"\n',
                                            preferred_quote="'"))
 
 
@@ -72,12 +68,12 @@ if True:
             unify.main(argv=['my_fake_program', filename],
                        standard_out=output_file,
                        standard_error=None)
-            self.assertEqual(unicode('''\
+            self.assertEqual('''\
 @@ -1,2 +1,2 @@
  if True:
 -    x = "abc"
 +    x = 'abc'
-'''), '\n'.join(output_file.getvalue().split('\n')[2:]))
+''', '\n'.join(output_file.getvalue().split('\n')[2:]))
 
     def test_diff_with_empty_file(self):
         with temporary_file('') as filename:
