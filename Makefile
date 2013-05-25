@@ -17,4 +17,4 @@ mutant:
 	@mut.py -t unify -u test_unify -mc
 
 readme:
-	@restview --long-description
+	@restview --long-description --strict
