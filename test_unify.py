@@ -51,6 +51,11 @@ class TestUnits(unittest.TestCase):
                          unify.format_code('x = "abc" \\\n"next"\n',
                                            preferred_quote="'"))
 
+    def test_format_code_with_backslash_in_comment(self):
+        self.assertEqual("x = 'abc' #\\\n'next'\n",
+                         unify.format_code('x = "abc" #\\\n"next"\n',
+                                           preferred_quote="'"))
+
     def test_format_code_with_syntax_error(self):
         self.assertEqual('foo("abc"\n',
                          unify.format_code('foo("abc"\n',
