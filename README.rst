@@ -3,8 +3,8 @@ unify
 =====
 
 .. image:: https://travis-ci.org/myint/unify.png?branch=master
-   :target: https://travis-ci.org/myint/unify
-   :alt: Build status
+    :target: https://travis-ci.org/myint/unify
+    :alt: Build status
 
 Modifies strings to all use the same quote where possible.
 
