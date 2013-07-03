@@ -29,6 +29,8 @@ import io
 import os
 import tokenize
 
+import untokenize
+
 
 __version__ = '0.1.5'
 
@@ -52,50 +54,23 @@ def _format_code(source, preferred_quote):
     if not source:
         return source
 
+    modified_tokens = []
+
     sio = io.StringIO(source)
-    formatted = ''
-    previous_line = ''
-    last_row = 0
-    last_column = -1
-    last_non_whitespace_token_type = None
-    for token in tokenize.generate_tokens(sio.readline):
-        token_type = token[0]
-        token_string = token[1]
-        start_row, start_column = token[2]
-        end_row, end_column = token[3]
-        line = token[4]
-
-        # Preserve escaped newlines
-        if (
-            last_non_whitespace_token_type != tokenize.COMMENT and
-            start_row > last_row and
-            (previous_line.endswith('\\\n') or
-             previous_line.endswith('\\\r\n') or
-             previous_line.endswith('\\\r'))
-        ):
-            formatted += previous_line[len(previous_line.rstrip(' \t\n\r\\')):]
-
-        # Preserve spacing
-        if start_row > last_row:
-            last_column = 0
-        if start_column > last_column:
-            formatted += line[last_column:start_column]
+    for (token_type,
+         token_string,
+         start,
+         end,
+         line) in tokenize.generate_tokens(sio.readline):
 
         if (token_type == tokenize.STRING):
-            formatted += unify_quotes(token_string,
-                                      preferred_quote=preferred_quote)
-        else:
-            formatted += token_string
+            token_string = unify_quotes(token_string,
+                                        preferred_quote=preferred_quote)
 
-        previous_line = line
+        modified_tokens.append(
+            (token_type, token_string, start, end, line))
 
-        last_row = end_row
-        last_column = end_column
-
-        if token_type not in [tokenize.INDENT, tokenize.NEWLINE, tokenize.NL]:
-            last_non_whitespace_token_type = token_type
-
-    return formatted
+    return untokenize.untokenize(modified_tokens)
 
 
 def unify_quotes(token_string, preferred_quote):

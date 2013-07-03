@@ -4,7 +4,8 @@
 from __future__ import unicode_literals
 
 import ast
-from distutils import core
+
+from setuptools import setup
 
 
 def version():
@@ -16,20 +17,22 @@ def version():
 
 
 with open('README.rst') as readme:
-    core.setup(name='unify',
-               version=version(),
-               description='Modifies strings to all use the same '
-                           '(single/double) quote where possible.',
-               long_description=readme.read(),
-               license='Expat License',
-               author='Steven Myint',
-               url='https://github.com/myint/unify',
-               classifiers=['Intended Audience :: Developers',
-                            'Environment :: Console',
-                            'Programming Language :: Python :: 2.6',
-                            'Programming Language :: Python :: 2.7',
-                            'Programming Language :: Python :: 3',
-                            'License :: OSI Approved :: MIT License'],
-               keywords='strings, formatter, style',
-               py_modules=['unify'],
-               scripts=['unify'])
+    setup(name='unify',
+          version=version(),
+          description='Modifies strings to all use the same '
+                      '(single/double) quote where possible.',
+          long_description=readme.read(),
+          license='Expat License',
+          author='Steven Myint',
+          url='https://github.com/myint/unify',
+          classifiers=['Intended Audience :: Developers',
+                       'Environment :: Console',
+                       'Programming Language :: Python :: 2.6',
+                       'Programming Language :: Python :: 2.7',
+                       'Programming Language :: Python :: 3',
+                       'License :: OSI Approved :: MIT License'],
+          keywords='strings, formatter, style',
+          py_modules=['unify'],
+          scripts=['unify'],
+          install_requires=['untokenize'],
+          test_suite='test_unify')
