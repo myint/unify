@@ -1,9 +1,12 @@
-.*.swp
 *.pyc
+.*.swp
+.tox/
+.travis-solo/
 MANIFEST
 README.html
 __pycache__/
-.tox/
 build/
 dist/
 htmlcov/
+unify.egg-info/
+untokenize-0.1-py3.3.egg
