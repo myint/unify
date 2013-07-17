@@ -14,7 +14,7 @@ Example
 
 After running::
 
-    $ unify example.py
+    $ unify --in-place example.py
 
 this code
 
