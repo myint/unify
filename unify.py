@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (C) 2013 Steven Myint
 #
 # Permission is hereby granted, free of charge, to any person obtaining
@@ -27,6 +29,8 @@ from __future__ import unicode_literals
 
 import io
 import os
+import signal
+import sys
 import tokenize
 
 import untokenize
@@ -141,8 +145,12 @@ def format_file(filename, args, standard_out):
             standard_out.write('\n'.join(list(diff) + ['']))
 
 
-def main(argv, standard_out, standard_error):
-    """Main entry point."""
+def _main(argv, standard_out, standard_error):
+    """Return exit status.
+
+    0 means no error.
+
+    """
     import argparse
     parser = argparse.ArgumentParser(description=__doc__, prog='unify')
     parser.add_argument('-i', '--in-place', action='store_true',
@@ -172,3 +180,24 @@ def main(argv, standard_out, standard_error):
                 format_file(name, args=args, standard_out=standard_out)
             except IOError as exception:
                 print(unicode(exception), file=standard_error)
+
+
+def main():
+    """Main entry point."""
+    try:
+        # Exit on broken pipe.
+        signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+    except AttributeError:  # pragma: no cover
+        # SIGPIPE is not available on Windows.
+        pass
+
+    try:
+        return _main(sys.argv,
+                     standard_out=sys.stdout,
+                     standard_error=sys.stderr)
+    except KeyboardInterrupt:  # pragma: no cover
+        return 2  # pragma: no cover
+
+
+if __name__ == '__main__':
+    sys.exit(main())

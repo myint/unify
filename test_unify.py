@@ -70,7 +70,7 @@ if True:
     x = "abc"
 ''') as filename:
             output_file = io.StringIO()
-            unify.main(argv=['my_fake_program', filename],
+            unify._main(argv=['my_fake_program', filename],
                        standard_out=output_file,
                        standard_error=None)
             self.assertEqual('''\
@@ -83,7 +83,7 @@ if True:
     def test_diff_with_empty_file(self):
         with temporary_file('') as filename:
             output_file = io.StringIO()
-            unify.main(argv=['my_fake_program', filename],
+            unify._main(argv=['my_fake_program', filename],
                        standard_out=output_file,
                        standard_error=None)
             self.assertEqual(
@@ -96,7 +96,7 @@ if True:
     x = "abc"
 ''') as filename:
             output_file = io.StringIO()
-            unify.main(argv=['my_fake_program', '--in-place', filename],
+            unify._main(argv=['my_fake_program', '--in-place', filename],
                        standard_out=output_file,
                        standard_error=None)
             with open(filename) as f:
@@ -116,7 +116,7 @@ if True:
 """, directory=inner_directory):
 
                     output_file = io.StringIO()
-                    unify.main(argv=['my_fake_program',
+                    unify._main(argv=['my_fake_program',
                                      '--recursive',
                                      directory],
                                standard_out=output_file,

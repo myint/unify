@@ -33,6 +33,7 @@ with open('README.rst') as readme:
                        'License :: OSI Approved :: MIT License'],
           keywords='strings, formatter, style',
           py_modules=['unify'],
-          scripts=['unify'],
+          entry_points={
+              'console_scripts': ['unify = unify:main']},
           install_requires=['untokenize'],
           test_suite='test_unify')

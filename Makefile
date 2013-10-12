@@ -1,13 +1,13 @@
 check:
-	pep8 unify unify.py setup.py
-	pep257 unify unify.py setup.py
+	pep8 unify.py setup.py
+	pep257 unify.py setup.py
 	pylint \
 		--reports=no \
 		--disable=invalid-name \
 		--rcfile=/dev/null \
 		unify.py setup.py
 	python setup.py --long-description | rst2html --strict > /dev/null
-	scspell unify unify.py setup.py test_unify.py README.rst
+	scspell unify.py setup.py test_unify.py README.rst
 
 coverage:
 	@rm -f .coverage
