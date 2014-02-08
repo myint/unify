@@ -67,7 +67,7 @@ def _format_code(source, preferred_quote):
          end,
          line) in tokenize.generate_tokens(sio.readline):
 
-        if (token_type == tokenize.STRING):
+        if token_type == tokenize.STRING:
             token_string = unify_quotes(token_string,
                                         preferred_quote=preferred_quote)
 
