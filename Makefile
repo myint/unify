@@ -6,7 +6,7 @@ check:
 		--disable=invalid-name \
 		--rcfile=/dev/null \
 		unify.py setup.py
-	python setup.py --long-description | rst2html --strict > /dev/null
+	rstcheck README.rst
 	scspell unify.py setup.py test_unify.py README.rst
 
 coverage:
