@@ -71,8 +71,8 @@ if True:
 ''') as filename:
             output_file = io.StringIO()
             unify._main(argv=['my_fake_program', filename],
-                       standard_out=output_file,
-                       standard_error=None)
+                        standard_out=output_file,
+                        standard_error=None)
             self.assertEqual('''\
 @@ -1,2 +1,2 @@
  if True:
@@ -84,8 +84,8 @@ if True:
         with temporary_file('') as filename:
             output_file = io.StringIO()
             unify._main(argv=['my_fake_program', filename],
-                       standard_out=output_file,
-                       standard_error=None)
+                        standard_out=output_file,
+                        standard_error=None)
             self.assertEqual(
                 '',
                 output_file.getvalue())
@@ -97,8 +97,8 @@ if True:
 ''') as filename:
             output_file = io.StringIO()
             unify._main(argv=['my_fake_program', '--in-place', filename],
-                       standard_out=output_file,
-                       standard_error=None)
+                        standard_out=output_file,
+                        standard_error=None)
             with open(filename) as f:
                 self.assertEqual('''\
 if True:
@@ -117,10 +117,10 @@ if True:
 
                     output_file = io.StringIO()
                     unify._main(argv=['my_fake_program',
-                                     '--recursive',
-                                     directory],
-                               standard_out=output_file,
-                               standard_error=None)
+                                      '--recursive',
+                                      directory],
+                                standard_out=output_file,
+                                standard_error=None)
                     self.assertEqual(
                         '',
                         output_file.getvalue().strip())
