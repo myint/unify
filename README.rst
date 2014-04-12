@@ -2,7 +2,7 @@
 unify
 =====
 
-.. image:: https://travis-ci.org/myint/unify.png?branch=master
+.. image:: https://travis-ci.org/myint/unify.svg?branch=master
     :target: https://travis-ci.org/myint/unify
     :alt: Build status
 
