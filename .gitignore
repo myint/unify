@@ -1,5 +1,6 @@
 *.pyc
 .*.swp
+.eggs/
 .tox/
 .travis-solo/
 MANIFEST
