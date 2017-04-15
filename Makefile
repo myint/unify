@@ -1,6 +1,6 @@
 check:
-	pep8 unify.py setup.py
-	pep257 unify.py setup.py
+	pycodestyle unify.py setup.py
+	pydocstyle unify.py setup.py
 	pylint \
 		--reports=no \
 		--disable=invalid-name \
