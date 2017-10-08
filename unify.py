@@ -121,7 +121,12 @@ def detect_encoding(filename):
 
 
 def format_file(filename, args, standard_out):
-    """Run format_code() on a file."""
+    """Run format_code() on a file.
+
+    Returns `True` if any changes are needed and they are not being
+    done in-place.
+
+    """
     encoding = detect_encoding(filename)
     with open_with_encoding(filename, encoding=encoding) as input_file:
         source = input_file.read()
@@ -144,17 +149,23 @@ def format_file(filename, args, standard_out):
                 lineterm='')
             standard_out.write('\n'.join(list(diff) + ['']))
 
+            return True
+
 
 def _main(argv, standard_out, standard_error):
-    """Return exit status.
+    """Run quotes unifying on files.
 
-    0 means no error.
+    Returns `1` if any quoting changes are still needed, otherwise
+    `None`.
 
     """
     import argparse
     parser = argparse.ArgumentParser(description=__doc__, prog='unify')
     parser.add_argument('-i', '--in-place', action='store_true',
                         help='make changes to files instead of printing diffs')
+    parser.add_argument('-c', '--check-only', action='store_true',
+                        help='exit with a status code of 1 if any changes are'
+                             ' still needed')
     parser.add_argument('-r', '--recursive', action='store_true',
                         help='drill down directories recursively')
     parser.add_argument('--quote', help='preferred quote', default="'")
@@ -166,6 +177,7 @@ def _main(argv, standard_out, standard_error):
     args = parser.parse_args(argv[1:])
 
     filenames = list(set(args.files))
+    changes_needed = False
     while filenames:
         name = filenames.pop(0)
         if args.recursive and os.path.isdir(name):
@@ -177,9 +189,13 @@ def _main(argv, standard_out, standard_error):
                                   if not d.startswith('.')]
         else:
             try:
-                format_file(name, args=args, standard_out=standard_out)
+                if format_file(name, args=args, standard_out=standard_out):
+                    changes_needed = True
             except IOError as exception:
                 print(unicode(exception), file=standard_error)
+
+    if args.check_only and changes_needed:
+        return 1
 
 
 def main():
