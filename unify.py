@@ -168,7 +168,8 @@ def _main(argv, standard_out, standard_error):
                              ' still needed')
     parser.add_argument('-r', '--recursive', action='store_true',
                         help='drill down directories recursively')
-    parser.add_argument('--quote', help='preferred quote', default="'")
+    parser.add_argument('--quote', help='preferred quote', choices=["'", '"'],
+                        default="'")
     parser.add_argument('--version', action='version',
                         version='%(prog)s ' + __version__)
     parser.add_argument('files', nargs='+',
