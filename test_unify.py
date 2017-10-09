@@ -130,7 +130,7 @@ if True:
     x = 'abc'
 ''', f.read())
 
-        def test_in_place_prevedence_over_check_only(self):
+        def test_in_place_precedence_over_check_only(self):
             with temporary_file('''\
     if True:
         x = "abc"
