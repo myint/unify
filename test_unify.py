@@ -70,9 +70,31 @@ if True:
     x = "abc"
 ''') as filename:
             output_file = io.StringIO()
-            unify._main(argv=['my_fake_program', filename],
-                        standard_out=output_file,
-                        standard_error=None)
+            self.assertEqual(
+                unify._main(argv=['my_fake_program', filename],
+                            standard_out=output_file,
+                            standard_error=None),
+                None,
+            )
+            self.assertEqual('''\
+@@ -1,2 +1,2 @@
+ if True:
+-    x = "abc"
++    x = 'abc'
+''', '\n'.join(output_file.getvalue().split('\n')[2:]))
+
+    def test_check_only(self):
+        with temporary_file('''\
+if True:
+    x = "abc"
+''') as filename:
+            output_file = io.StringIO()
+            self.assertEqual(
+                unify._main(argv=['my_fake_program', '--check-only', filename],
+                            standard_out=output_file,
+                            standard_error=None),
+                1,
+            )
             self.assertEqual('''\
 @@ -1,2 +1,2 @@
  if True:
@@ -96,14 +118,38 @@ if True:
     x = "abc"
 ''') as filename:
             output_file = io.StringIO()
-            unify._main(argv=['my_fake_program', '--in-place', filename],
-                        standard_out=output_file,
-                        standard_error=None)
+            self.assertEqual(
+                unify._main(argv=['my_fake_program', '--in-place', filename],
+                            standard_out=output_file,
+                            standard_error=None),
+                None,
+            )
             with open(filename) as f:
                 self.assertEqual('''\
 if True:
     x = 'abc'
 ''', f.read())
+
+        def test_in_place_prevedence_over_check_only(self):
+            with temporary_file('''\
+    if True:
+        x = "abc"
+    ''') as filename:
+                output_file = io.StringIO()
+                self.assertEqual(
+                    unify._main(argv=['my_fake_program',
+                                      '--in-place',
+                                      '--check-only',
+                                      filename],
+                                standard_out=output_file,
+                                standard_error=None),
+                    None,
+                )
+                with open(filename) as f:
+                    self.assertEqual('''\
+    if True:
+        x = 'abc'
+    ''', f.read())
 
     def test_ignore_hidden_directories(self):
         with temporary_directory() as directory:
@@ -116,11 +162,14 @@ if True:
 """, directory=inner_directory):
 
                     output_file = io.StringIO()
-                    unify._main(argv=['my_fake_program',
-                                      '--recursive',
-                                      directory],
-                                standard_out=output_file,
-                                standard_error=None)
+                    self.assertEqual(
+                        unify._main(argv=['my_fake_program',
+                                          '--recursive',
+                                          directory],
+                                    standard_out=output_file,
+                                    standard_error=None),
+                        None,
+                    )
                     self.assertEqual(
                         '',
                         output_file.getvalue().strip())
