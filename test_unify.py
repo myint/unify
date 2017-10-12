@@ -112,6 +112,19 @@ if True:
                 '',
                 output_file.getvalue())
 
+    def test_diff_with_missing_file(self):
+        output_file = io.StringIO()
+        non_existent_filename = '/non_existent_file_92394492929'
+
+        self.assertEqual(
+            1,
+            unify._main(argv=['my_fake_program',
+                              '/non_existent_file_92394492929'],
+                        standard_out=None,
+                        standard_error=output_file))
+
+        self.assertIn(non_existent_filename, output_file.getvalue())
+
     def test_in_place(self):
         with temporary_file('''\
 if True:

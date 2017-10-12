@@ -179,6 +179,7 @@ def _main(argv, standard_out, standard_error):
 
     filenames = list(set(args.files))
     changes_needed = False
+    failure = False
     while filenames:
         name = filenames.pop(0)
         if args.recursive and os.path.isdir(name):
@@ -194,17 +195,18 @@ def _main(argv, standard_out, standard_error):
                     changes_needed = True
             except IOError as exception:
                 print(unicode(exception), file=standard_error)
+                failure = True
 
-    if args.check_only and changes_needed:
+    if failure or (args.check_only and changes_needed):
         return 1
 
 
-def main():
+def main():  # pragma: no cover
     """Main entry point."""
     try:
         # Exit on broken pipe.
         signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-    except AttributeError:  # pragma: no cover
+    except AttributeError:
         # SIGPIPE is not available on Windows.
         pass
 
@@ -212,9 +214,9 @@ def main():
         return _main(sys.argv,
                      standard_out=sys.stdout,
                      standard_error=sys.stderr)
-    except KeyboardInterrupt:  # pragma: no cover
-        return 2  # pragma: no cover
+    except KeyboardInterrupt:
+        return 2
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    sys.exit(main())  # pragma: no cover
