@@ -123,8 +123,8 @@ def detect_encoding(filename):
 def format_file(filename, args, standard_out):
     """Run format_code() on a file.
 
-    Returns `True` if any changes are needed and they are not being
-    done in-place.
+    Returns `True` if any changes are needed and they are not being done
+    in-place.
 
     """
     encoding = detect_encoding(filename)

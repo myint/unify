@@ -130,26 +130,26 @@ if True:
     x = 'abc'
 ''', f.read())
 
-        def test_in_place_precedence_over_check_only(self):
-            with temporary_file('''\
-    if True:
-        x = "abc"
-    ''') as filename:
-                output_file = io.StringIO()
-                self.assertEqual(
-                    unify._main(argv=['my_fake_program',
-                                      '--in-place',
-                                      '--check-only',
-                                      filename],
-                                standard_out=output_file,
-                                standard_error=None),
-                    None,
-                )
-                with open(filename) as f:
-                    self.assertEqual('''\
-    if True:
-        x = 'abc'
-    ''', f.read())
+    def test_in_place_precedence_over_check_only(self):
+        with temporary_file('''\
+if True:
+    x = "abc"
+''') as filename:
+            output_file = io.StringIO()
+            self.assertEqual(
+                unify._main(argv=['my_fake_program',
+                                  '--in-place',
+                                  '--check-only',
+                                  filename],
+                            standard_out=output_file,
+                            standard_error=None),
+                None,
+            )
+            with open(filename) as f:
+                self.assertEqual('''\
+if True:
+    x = 'abc'
+''', f.read())
 
     def test_ignore_hidden_directories(self):
         with temporary_directory() as directory:
