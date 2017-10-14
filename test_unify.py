@@ -62,6 +62,47 @@ class TestUnits(unittest.TestCase):
                                            preferred_quote="'"))
 
 
+class TestUnitsWithFstrings(unittest.TestCase):
+    """ Tests for python >= 3.6 fstring handling."""
+
+    def test_unify_quotes(self):
+        self.assertEqual("f'foo'",
+                         unify.unify_quotes('f"foo"',
+                                            preferred_quote="'"))
+
+        self.assertEqual('f"foo"',
+                         unify.unify_quotes('f"foo"',
+                                            preferred_quote='"'))
+
+        self.assertEqual('f"foo"',
+                         unify.unify_quotes("f'foo'",
+                                            preferred_quote='"'))
+
+    def test_unify_quotes_should_avoid_some_cases(self):
+        self.assertEqual('''f"foo's"''',
+                         unify.unify_quotes('''f"foo's"''',
+                                            preferred_quote="'"))
+
+        self.assertEqual('''f"""foo"""''',
+                         unify.unify_quotes('''f"""foo"""''',
+                                            preferred_quote="'"))
+
+    def test_format_code(self):
+        self.assertEqual("x = f'abc' \\\nf'next'\n",
+                         unify.format_code('x = f"abc" \\\nf"next"\n',
+                                           preferred_quote="'"))
+
+    def test_format_code_with_backslash_in_comment(self):
+        self.assertEqual("x = f'abc' #\\\nf'next'\n",
+                         unify.format_code('x = f"abc" #\\\nf"next"\n',
+                                           preferred_quote="'"))
+
+    def test_format_code_with_syntax_error(self):
+        self.assertEqual('foo(f"abc"\n',
+                         unify.format_code('foo(f"abc"\n',
+                                           preferred_quote="'"))
+
+
 class TestSystem(unittest.TestCase):
 
     def test_diff(self):
