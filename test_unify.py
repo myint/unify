@@ -103,6 +103,47 @@ class TestUnitsWithFstrings(unittest.TestCase):
                                            preferred_quote="'"))
 
 
+class TestUnitsWithByteStrings(unittest.TestCase):
+    """ Tests for python3 byte string handling."""
+
+    def test_unify_quotes(self):
+        self.assertEqual("b'foo'",
+                         unify.unify_quotes('b"foo"',
+                                            preferred_quote="'"))
+
+        self.assertEqual('b"foo"',
+                         unify.unify_quotes('b"foo"',
+                                            preferred_quote='"'))
+
+        self.assertEqual('b"foo"',
+                         unify.unify_quotes("b'foo'",
+                                            preferred_quote='"'))
+
+    def test_unify_quotes_should_avoid_some_cases(self):
+        self.assertEqual('''b"foo's"''',
+                         unify.unify_quotes('''b"foo's"''',
+                                            preferred_quote="'"))
+
+        self.assertEqual('''b"""foo"""''',
+                         unify.unify_quotes('''b"""foo"""''',
+                                            preferred_quote="'"))
+
+    def test_format_code(self):
+        self.assertEqual("x = b'abc' \\\nb'next'\n",
+                         unify.format_code('x = b"abc" \\\nb"next"\n',
+                                           preferred_quote="'"))
+
+    def test_format_code_with_backslash_in_comment(self):
+        self.assertEqual("x = b'abc' #\\\nb'next'\n",
+                         unify.format_code('x = b"abc" #\\\nb"next"\n',
+                                           preferred_quote="'"))
+
+    def test_format_code_with_syntax_error(self):
+        self.assertEqual('foo(b"abc"\n',
+                         unify.format_code('foo(b"abc"\n',
+                                           preferred_quote="'"))
+
+
 class TestSystem(unittest.TestCase):
 
     def test_diff(self):

@@ -83,7 +83,8 @@ def unify_quotes(token_string, preferred_quote):
                  "'": '"'}[preferred_quote]
 
     if not (token_string.startswith(bad_quote)
-            or token_string.startswith('f' + bad_quote)):
+            or token_string.startswith('f' + bad_quote)
+            or token_string.startswith('b' + bad_quote)):
         return token_string
 
     if token_string.count(bad_quote) != 2:
@@ -92,13 +93,16 @@ def unify_quotes(token_string, preferred_quote):
     if preferred_quote in token_string:
         return token_string
     is_fstring = token_string.startswith('f' + bad_quote)
+    is_byte_string = token_string.startswith('b' + bad_quote)
 
-    assert token_string.startswith(bad_quote) or is_fstring
+    assert token_string.startswith(bad_quote) or is_fstring or is_byte_string
     assert token_string.endswith(bad_quote)
     assert len(token_string) >= 2
 
     if is_fstring:
         return 'f' + preferred_quote + token_string[2:-1] + preferred_quote
+    if is_byte_string:
+        return 'b' + preferred_quote + token_string[2:-1] + preferred_quote
 
     return preferred_quote + token_string[1:-1] + preferred_quote
 
