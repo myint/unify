@@ -11,3 +11,5 @@ dist/
 htmlcov/
 unify.egg-info/
 untokenize-0.1-py3.3.egg
+.idea/
+.python-version

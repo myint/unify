@@ -82,8 +82,14 @@ def unify_quotes(token_string, preferred_quote):
     bad_quote = {'"': "'",
                  "'": '"'}[preferred_quote]
 
-    if not (token_string.startswith(bad_quote)
-            or token_string.startswith('f' + bad_quote)):
+    allowed_starts = {
+        '': bad_quote,
+        'f': 'f' + bad_quote,
+        'b': 'b' + bad_quote
+    }
+
+    if not any(token_string.startswith(start)
+               for start in allowed_starts.values()):
         return token_string
 
     if token_string.count(bad_quote) != 2:
@@ -91,16 +97,17 @@ def unify_quotes(token_string, preferred_quote):
 
     if preferred_quote in token_string:
         return token_string
-    is_fstring = token_string.startswith('f' + bad_quote)
 
-    assert token_string.startswith(bad_quote) or is_fstring
     assert token_string.endswith(bad_quote)
     assert len(token_string) >= 2
-
-    if is_fstring:
-        return 'f' + preferred_quote + token_string[2:-1] + preferred_quote
-
-    return preferred_quote + token_string[1:-1] + preferred_quote
+    for prefix, start in allowed_starts.items():
+        if token_string.startswith(start):
+            chars_to_strip_from_front = len(start)
+            return '{prefix}{preferred_quote}{token}{preferred_quote}'.format(
+                prefix=prefix,
+                preferred_quote=preferred_quote,
+                token=token_string[chars_to_strip_from_front:-1]
+            )
 
 
 def open_with_encoding(filename, encoding, mode='r'):
