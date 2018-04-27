@@ -29,3 +29,6 @@ gets formatted into this
 
     x = 'abc'
     y = 'hello'
+
+STDIN can be formatted by passing `-` as a filename. The formatted text can be
+printed to STDOUT by passing `-s` or `--stdout`.
