@@ -152,7 +152,7 @@ def format_file(filename, args, standard_out):
     if source != formatted_source:
         if args.stdout:
             sys.stdout.write(formatted_source)
-        elif args.in_place and filename != sys.stdin:
+        elif args.in_place and input_file != sys.stdin:
             with open_with_encoding(filename, mode='w',
                                     encoding=encoding) as output_file:
                 output_file.write(formatted_source)
