@@ -1,0 +1,7 @@
+-   id: unify
+    name: unify
+    entry: unify
+    language: python
+    types: [python]
+    require_serial: true
+    args: ["--in-place"]
