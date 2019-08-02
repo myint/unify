@@ -36,7 +36,7 @@ import tokenize
 import untokenize
 
 
-__version__ = '0.4'
+__version__ = '0.5'
 
 
 try:
@@ -85,6 +85,8 @@ def unify_quotes(token_string, preferred_quote):
     allowed_starts = {
         '': bad_quote,
         'f': 'f' + bad_quote,
+        'r': 'r' + bad_quote,
+        'u': 'u' + bad_quote,
         'b': 'b' + bad_quote
     }
 
