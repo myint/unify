@@ -165,6 +165,8 @@ def format_file(filename, args, standard_out):
 
             return True
 
+    return False
+
 
 def _main(argv, standard_out, standard_error):
     """Run quotes unifying on files.
@@ -216,7 +218,7 @@ def _main(argv, standard_out, standard_error):
 
 
 def main():  # pragma: no cover
-    """Main entry point."""
+    """Return exit status."""
     try:
         # Exit on broken pipe.
         signal.signal(signal.SIGPIPE, signal.SIG_DFL)

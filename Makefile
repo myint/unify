@@ -4,6 +4,7 @@ check:
 	pylint \
 		--reports=no \
 		--disable=invalid-name \
+		--disable=inconsistent-return-statements \
 		--rcfile=/dev/null \
 		unify.py setup.py
 	rstcheck README.rst
