@@ -113,8 +113,67 @@ class SimpleString(AbstractString):
     @property
     def old_token(self):
         return '{prefix}{quote}{body}{quote}'.format(
-            prefix=self.prefix, quote=self.old_quote, body=self.body
+            prefix=self.old_prefix, quote=self.old_quote, body=self.body
         )
+
+
+class SimpleEscapeString(AbstractString):
+    """
+    String with one type of quote in body.
+
+    Use escape_simple and preferred_quote rules.
+    """
+    OPPOSITE_QUOTE = {"'": '"', '"': "'"}
+
+    def __init__(self, prefix, quote, body):
+        self.prefix = prefix
+        self.quote = quote
+        self.body = body
+        self.old_prefix = prefix
+        self.old_quote = quote
+        self.old_body = body
+
+    def reformat(self):
+        preferred_quote = rules['preferred_quote']
+        escape_simple = rules['escape_simple']
+        quote_in_body = "'" if "'" in self.body else '"'
+
+        if escape_simple == 'ignore': return
+
+        body = drop_escape_backslash(self.body)
+        if escape_simple == 'opposite':
+            self.quote = self.OPPOSITE_QUOTE[quote_in_body]
+        else:
+            self.quote = preferred_quote
+            if preferred_quote == quote_in_body:
+                body = body.replace(quote_in_body, '\\' + quote_in_body)
+        self.body = body
+
+    @property
+    def token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.prefix, quote=self.quote, body=self.body
+        )
+
+    @property
+    def old_token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.old_prefix, quote=self.old_quote, body=self.old_body
+        )
+
+
+def drop_escape_backslash(body):
+    bs_pattern = '(\\\\+[\'"])'
+    splitted_body = re.split(bs_pattern, body)
+
+    def _drop_escape_bs(string):
+        if string.startswith('\\') and len(string) % 2 == 0:
+            string = string[1:]
+        return string
+
+    splitted_body = [_drop_escape_bs(chunk) for chunk in splitted_body]
+    body = ''.join(splitted_body)
+    return body
 
 
 def format_code(source):
@@ -164,13 +223,26 @@ def get_editable_string(token_type, token_string):
 
     if parsed_string['quote'] in ('"""', "'''"):
         return ImmutableString(token_string)
+    if all(qt not in parsed_string['body'] for qt in ("'", '"')):
+        return SimpleString(**parsed_string)
+    if 'r' in parsed_string['prefix'].lower():
+        # don't transform raw string since can't use backslash
+        # as escape char
+        return ImmutableString(token_string)
     if all(qt in parsed_string['body'] for qt in ("'", '"')):
         # don't transform complicated escape yet
         return ImmutableString(token_string)
     if any(qt in parsed_string['body'] for qt in ("'", '"')):
-        # don't transform simple escape yet
-        return ImmutableString(token_string)
-    return SimpleString(**parsed_string)
+        if 'f' in parsed_string['prefix'].lower():
+            if any(br in parsed_string['body'] for br in '{}'):
+                # don't transform f-string since can't use
+                # backslash in bracket area
+                # need special handling - not implemented yet
+                return ImmutableString(token_string)
+            # if don't have brackets we can treat this case as normal string
+            return SimpleEscapeString(**parsed_string)
+        return SimpleEscapeString(**parsed_string)
+    return ImmutableString(token_string)
 
 
 def open_with_encoding(filename, encoding, mode='r'):
@@ -245,6 +317,9 @@ def _main(argv, standard_out, standard_error):
                         help='drill down directories recursively')
     parser.add_argument('--quote', help='preferred quote', choices=["'", '"'],
                         default="'")
+    parser.add_argument('--escape-simple', help='simple escape strategy',
+                        choices=['opposite', 'backslash', 'ignore'],
+                        default='opposite')
     parser.add_argument('--version', action='version',
                         version='%(prog)s ' + __version__)
     parser.add_argument('files', nargs='+',
@@ -253,6 +328,7 @@ def _main(argv, standard_out, standard_error):
     args = parser.parse_args(argv[1:])
 
     rules['preferred_quote'] = args.quote
+    rules['escape_simple'] = args.escape_simple
     filenames = list(set(args.files))
     changes_needed = False
     failure = False

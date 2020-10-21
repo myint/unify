@@ -69,23 +69,60 @@ class TestUnitsSimpleString(unittest.TestCase):
 
 class TestUnitsSimpleQuotedString(unittest.TestCase):
 
-    def test_single_in_body(self):
+    def test_opposite(self):
         unify.rules['preferred_quote'] = "'"
+        unify.rules['escape_simple'] = 'opposite'
 
         result = unify.format_code('''"foo's"''')
         self.assertEqual(result, '''"foo's"''')
 
-        result = unify.format_code('''f"foo's"''')
-        self.assertEqual(result, '''f"foo's"''')
+        result = unify.format_code("""'foo"s'""")
+        self.assertEqual(result, """'foo"s'""")
 
-        result = unify.format_code('''r"foo's"''')
-        self.assertEqual(result, '''r"foo's"''')
+        result = unify.format_code('''"foo\\"s"''')
+        self.assertEqual(result, """'foo"s'""")
 
-        result = unify.format_code('''u"foo's"''')
-        self.assertEqual(result, '''u"foo's"''')
+        result = unify.format_code("""'foo\\'s'""")
+        self.assertEqual(result, '''"foo's"''')
 
-        result = unify.format_code('''b"foo's"''')
-        self.assertEqual(result, '''b"foo's"''')
+    def test_backslash(self):
+        unify.rules['preferred_quote'] = "'"
+        unify.rules['escape_simple'] = 'backslash'
+
+        result = unify.format_code('''"foo's"''')
+        self.assertEqual(result, """'foo\\'s'""")
+
+        result = unify.format_code("""'foo"s'""")
+        self.assertEqual(result, """'foo"s'""")
+
+        result = unify.format_code('''"foo\\"s"''')
+        self.assertEqual(result, """'foo"s'""")
+
+        result = unify.format_code("""'foo\\'s'""")
+        self.assertEqual(result, """'foo\\'s'""")
+
+    def test_keep_unformatted(self):
+        unify.rules['preferred_quote'] = "'"
+        unify.rules['escape_simple'] = 'opposite'
+
+        result = unify.format_code('''f"foo's{some_var}"''')
+        self.assertEqual(result, '''f"foo's{some_var}"''')
+
+        result = unify.format_code("""r'foo\\'s'""")
+        self.assertEqual(result, """r'foo\\'s'""")
+
+    def test_backslash_train(self):
+        unify.rules['preferred_quote'] = "'"
+        unify.rules['escape_simple'] = 'opposite'
+
+        result = unify.format_code('''"a'b\\'c\\\\'d\\\\\\'e\\\\\\\\'f"''')
+        self.assertEqual(result, '''"a'b'c\\\\'d\\\\'e\\\\\\\\'f"''')
+
+        result = unify.format_code('''"\\'a"''')
+        self.assertEqual(result, '''"'a"''')
+
+        result = unify.format_code('''"\\\\'a"''')
+        self.assertEqual(result, '''"\\\\'a"''')
 
 
 class TestUnitsTripleQuote(unittest.TestCase):
