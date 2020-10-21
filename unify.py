@@ -27,8 +27,10 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from abc import ABCMeta, abstractmethod, abstractproperty
 import io
 import os
+import re
 import signal
 import sys
 import tokenize
@@ -43,6 +45,76 @@ try:
     unicode
 except NameError:
     unicode = str
+
+
+# dict with transform rules
+rules = {}
+
+
+class AbstractString:
+    """Interface to transform strings."""
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def reformat(self): pass
+
+    @abstractproperty
+    def token(self): pass
+
+    @abstractproperty
+    def old_token(self): pass
+
+
+class ImmutableString(AbstractString):
+    """
+    Null object.
+
+    Don't transform string.
+    """
+
+    def __init__(self, body):
+        self.body = body
+
+    def reformat(self): pass
+
+    @property
+    def token(self):
+        return self.body
+
+    @property
+    def old_token(self):
+        return self.body
+
+
+class SimpleString(AbstractString):
+    """
+    String without quote in body.
+
+    Use prefered_quote rule.
+    """
+
+    def __init__(self, prefix, quote, body):
+        self.prefix = prefix
+        self.quote = quote
+        self.body = body
+        self.old_prefix = prefix
+        self.old_quote = quote
+
+    def reformat(self):
+        preferred_quote = rules['preferred_quote']
+        self.quote = preferred_quote
+
+    @property
+    def token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.prefix, quote=self.quote, body=self.body
+        )
+
+    @property
+    def old_token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.prefix, quote=self.old_quote, body=self.body
+        )
 
 
 def format_code(source, preferred_quote="'"):
@@ -75,6 +147,30 @@ def _format_code(source, preferred_quote):
             (token_type, token_string, start, end, line))
 
     return untokenize.untokenize(modified_tokens)
+
+
+def get_string_object(token_type, token_string):
+    """dispatcher function."""
+    if token_type != tokenize.STRING:
+        return ImmutableString(token_string)
+
+    string_pattern = r'''(?P<prefix>[rubf]*)(?P<quote>['"]{3}|['"])(?P<body>.*)(?P=quote)'''
+    m = re.match(string_pattern, token_string, re.I | re.S)
+
+    if not m:
+        return ImmutableString(token_string)
+
+    parsed_string = m.groupdict()
+
+    if parsed_string['quote'] in ('"""', "'''"):
+        return ImmutableString(token_string)
+    if all(qt in parsed_string['body'] for qt in ("'", '"')):
+        # don't transform complicated escape yet
+        return ImmutableString(token_string)
+    if any(qt in parsed_string['body'] for qt in ("'", '"')):
+        # don't transform simple escape yet
+        return ImmutableString(token_string)
+    return SimpleString(**parsed_string)
 
 
 def unify_quotes(token_string, preferred_quote):
@@ -193,6 +289,7 @@ def _main(argv, standard_out, standard_error):
 
     args = parser.parse_args(argv[1:])
 
+    rules['preferred_quote'] = args.quote
     filenames = list(set(args.files))
     changes_needed = False
     failure = False
