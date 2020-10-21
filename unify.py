@@ -117,15 +117,15 @@ class SimpleString(AbstractString):
         )
 
 
-def format_code(source, preferred_quote="'"):
+def format_code(source):
     """Return source code with quotes unified."""
     try:
-        return _format_code(source, preferred_quote)
+        return _format_code(source)
     except (tokenize.TokenError, IndentationError):
         return source
 
 
-def _format_code(source, preferred_quote):
+def _format_code(source):
     """Return source code with quotes unified."""
     if not source:
         return source
@@ -140,8 +140,7 @@ def _format_code(source, preferred_quote):
          line) in tokenize.generate_tokens(sio.readline):
 
         if token_type == tokenize.STRING:
-            token_string = unify_quotes(token_string,
-                                        preferred_quote=preferred_quote)
+            token_string = unify_quotes(token_string)
 
         modified_tokens.append(
             (token_type, token_string, start, end, line))
@@ -173,8 +172,9 @@ def get_string_object(token_type, token_string):
     return SimpleString(**parsed_string)
 
 
-def unify_quotes(token_string, preferred_quote):
+def unify_quotes(token_string):
     """Return string with quotes changed to preferred_quote if possible."""
+    preferred_quote = rules['preferred_quote']
     bad_quote = {'"': "'",
                  "'": '"'}[preferred_quote]
 
@@ -240,9 +240,7 @@ def format_file(filename, args, standard_out):
     encoding = detect_encoding(filename)
     with open_with_encoding(filename, encoding=encoding) as input_file:
         source = input_file.read()
-        formatted_source = format_code(
-            source,
-            preferred_quote=args.quote)
+        formatted_source = format_code(source)
 
     if source != formatted_source:
         if args.in_place:
