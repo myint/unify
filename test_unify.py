@@ -22,48 +22,48 @@ class TestUnitsSimpleString(unittest.TestCase):
     def test_preferred_single(self):
         unify.rules['preferred_quote'] = "'"
 
-        result = unify.unify_quotes('"foo"')
+        result = unify.format_code('"foo"')
         self.assertEqual(result, "'foo'")
 
-        result = unify.unify_quotes('f"foo"')
+        result = unify.format_code('f"foo"')
         self.assertEqual(result, "f'foo'")
 
-        result = unify.unify_quotes('r"foo"')
+        result = unify.format_code('r"foo"')
         self.assertEqual(result, "r'foo'")
 
-        result = unify.unify_quotes('u"foo"')
+        result = unify.format_code('u"foo"')
         self.assertEqual(result, "u'foo'")
 
-        result = unify.unify_quotes('b"foo"')
+        result = unify.format_code('b"foo"')
         self.assertEqual(result, "b'foo'")
 
 
     def test_preferred_double(self):
         unify.rules['preferred_quote'] = '"'
 
-        result = unify.unify_quotes("'foo'")
+        result = unify.format_code("'foo'")
         self.assertEqual(result, '"foo"')
 
-        result = unify.unify_quotes("f'foo'")
+        result = unify.format_code("f'foo'")
         self.assertEqual(result, 'f"foo"')
 
-        result = unify.unify_quotes("r'foo'")
+        result = unify.format_code("r'foo'")
         self.assertEqual(result, 'r"foo"')
 
-        result = unify.unify_quotes("u'foo'")
+        result = unify.format_code("u'foo'")
         self.assertEqual(result, 'u"foo"')
 
-        result = unify.unify_quotes("b'foo'")
+        result = unify.format_code("b'foo'")
         self.assertEqual(result, 'b"foo"')
 
     def test_keep_single(self):
         unify.rules['preferred_quote'] = "'"
-        result = unify.unify_quotes("'foo'")
+        result = unify.format_code("'foo'")
         self.assertEqual(result, "'foo'")
 
     def test_keep_double(self):
         unify.rules['preferred_quote'] = '"'
-        result = unify.unify_quotes('"foo"')
+        result = unify.format_code('"foo"')
         self.assertEqual(result, '"foo"')
 
 
@@ -72,19 +72,19 @@ class TestUnitsSimpleQuotedString(unittest.TestCase):
     def test_single_in_body(self):
         unify.rules['preferred_quote'] = "'"
 
-        result = unify.unify_quotes('''"foo's"''')
+        result = unify.format_code('''"foo's"''')
         self.assertEqual(result, '''"foo's"''')
 
-        result = unify.unify_quotes('''f"foo's"''')
+        result = unify.format_code('''f"foo's"''')
         self.assertEqual(result, '''f"foo's"''')
 
-        result = unify.unify_quotes('''r"foo's"''')
+        result = unify.format_code('''r"foo's"''')
         self.assertEqual(result, '''r"foo's"''')
 
-        result = unify.unify_quotes('''u"foo's"''')
+        result = unify.format_code('''u"foo's"''')
         self.assertEqual(result, '''u"foo's"''')
 
-        result = unify.unify_quotes('''b"foo's"''')
+        result = unify.format_code('''b"foo's"''')
         self.assertEqual(result, '''b"foo's"''')
 
 
@@ -93,19 +93,19 @@ class TestUnitsTripleQuote(unittest.TestCase):
     def test_no_change(self):
         unify.rules['preferred_quote'] = "'"
 
-        result = unify.unify_quotes('''"""foo"""''')
+        result = unify.format_code('''"""foo"""''')
         self.assertEqual(result, '''"""foo"""''')
 
-        result = unify.unify_quotes('''f"""foo"""''')
+        result = unify.format_code('''f"""foo"""''')
         self.assertEqual(result, '''f"""foo"""''')
 
-        result = unify.unify_quotes('''r"""\\t"""''')
+        result = unify.format_code('''r"""\\t"""''')
         self.assertEqual(result, '''r"""\\t"""''')
 
-        result = unify.unify_quotes('''u"""foo"""''')
+        result = unify.format_code('''u"""foo"""''')
         self.assertEqual(result, '''u"""foo"""''')
 
-        result = unify.unify_quotes('''b"""foo"""''')
+        result = unify.format_code('''b"""foo"""''')
         self.assertEqual(result, '''b"""foo"""''')
 
 class TestUnitsCode(unittest.TestCase):
