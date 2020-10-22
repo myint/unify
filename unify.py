@@ -328,7 +328,8 @@ def _main(argv, standard_out, standard_error):
                         help='drill down directories recursively')
     parser.add_argument('--quote', help='preferred quote', choices=["'", '"'],
                         default="'")
-    parser.add_argument('--escape-simple', help='simple escape strategy',
+    parser.add_argument('--escape-simple',
+                        help='escape strategy if string has one type of quote',
                         choices=['opposite', 'backslash', 'ignore'],
                         default='opposite')
     parser.add_argument('--version', action='version',
