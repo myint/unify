@@ -175,6 +175,23 @@ def drop_escape_backslash(body):
     body = ''.join(splitted_body)
     return body
 
+class SimpleEscapeFstring(SimpleEscapeString):
+    """
+    F-string with one type of quote in body.
+
+    Not fully implemented.
+    Use escape_simple and preferred_quote rules.
+    """
+
+    def reformat(self):
+        if any(br in self.body for br in '{}'):
+            # don't transform since can't use backslashes in bracket area
+            # TODO add body parsing and handle this case
+            return
+
+        # can treat this case as simple escape
+        super().reformat()
+
 
 def format_code(source):
     """Return source code with quotes unified."""
@@ -234,13 +251,7 @@ def get_editable_string(token_type, token_string):
         return ImmutableString(token_string)
     if any(qt in parsed_string['body'] for qt in ("'", '"')):
         if 'f' in parsed_string['prefix'].lower():
-            if any(br in parsed_string['body'] for br in '{}'):
-                # don't transform f-string since can't use
-                # backslash in bracket area
-                # need special handling - not implemented yet
-                return ImmutableString(token_string)
-            # if don't have brackets we can treat this case as normal string
-            return SimpleEscapeString(**parsed_string)
+            return SimpleEscapeFstring(**parsed_string)
         return SimpleEscapeString(**parsed_string)
     return ImmutableString(token_string)
 
