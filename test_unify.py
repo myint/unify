@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 import contextlib
 import io
 import tempfile
+from textwrap import dedent
 
 try:
     # Python 2.6
@@ -36,7 +37,6 @@ class TestUnitsSimpleString(unittest.TestCase):
 
         result = unify.format_code('b"foo"')
         self.assertEqual(result, "b'foo'")
-
 
     def test_preferred_double(self):
         unify.rules['preferred_quote'] = '"'
@@ -145,12 +145,12 @@ class TestUnitsTripleQuote(unittest.TestCase):
         result = unify.format_code('''b"""foo"""''')
         self.assertEqual(result, '''b"""foo"""''')
 
+
 class TestUnitsCode(unittest.TestCase):
 
     def test_detect_encoding_with_bad_encoding(self):
         with temporary_file('# -*- coding: blah -*-\n') as filename:
-            self.assertEqual('latin-1',
-                             unify.detect_encoding(filename))
+            self.assertEqual('latin-1', unify.detect_encoding(filename))
 
     def test_format_code(self):
         unify.rules['preferred_quote'] = "'"
@@ -210,42 +210,46 @@ class TestUnitsCode(unittest.TestCase):
 class TestSystem(unittest.TestCase):
 
     def test_diff(self):
-        with temporary_file('''\
-if True:
-    x = "abc"
-''') as filename:
+        with temporary_file(dedent('''\
+            if True:
+                x = "abc"
+        ''')) as filename:
             output_file = io.StringIO()
             self.assertEqual(
                 unify._main(argv=['my_fake_program', filename],
                             standard_out=output_file,
                             standard_error=None),
-                None,
-            )
-            self.assertEqual('''\
-@@ -1,2 +1,2 @@
- if True:
--    x = "abc"
-+    x = 'abc'
-''', '\n'.join(output_file.getvalue().split('\n')[2:]))
+                None)
+
+            self.assertEqual(
+                dedent('''\
+                    @@ -1,2 +1,2 @@
+                     if True:
+                    -    x = "abc"
+                    +    x = 'abc'
+                '''),
+                '\n'.join(output_file.getvalue().split('\n')[2:]))
 
     def test_check_only(self):
-        with temporary_file('''\
-if True:
-    x = "abc"
-''') as filename:
+        with temporary_file(dedent('''\
+            if True:
+                x = "abc"
+        ''')) as filename:
             output_file = io.StringIO()
             self.assertEqual(
                 unify._main(argv=['my_fake_program', '--check-only', filename],
                             standard_out=output_file,
                             standard_error=None),
-                1,
-            )
-            self.assertEqual('''\
-@@ -1,2 +1,2 @@
- if True:
--    x = "abc"
-+    x = 'abc'
-''', '\n'.join(output_file.getvalue().split('\n')[2:]))
+                1)
+
+            self.assertEqual(
+                dedent('''\
+                    @@ -1,2 +1,2 @@
+                     if True:
+                    -    x = "abc"
+                    +    x = 'abc'
+                '''),
+                '\n'.join(output_file.getvalue().split('\n')[2:]))
 
     def test_diff_with_empty_file(self):
         with temporary_file('') as filename:
@@ -253,9 +257,7 @@ if True:
             unify._main(argv=['my_fake_program', filename],
                         standard_out=output_file,
                         standard_error=None)
-            self.assertEqual(
-                '',
-                output_file.getvalue())
+            self.assertEqual('', output_file.getvalue())
 
     def test_diff_with_missing_file(self):
         output_file = io.StringIO()
@@ -263,36 +265,38 @@ if True:
 
         self.assertEqual(
             1,
-            unify._main(argv=['my_fake_program',
-                              '/non_existent_file_92394492929'],
-                        standard_out=None,
-                        standard_error=output_file))
+            unify._main(
+                argv=['my_fake_program', '/non_existent_file_92394492929'],
+                standard_out=None,
+                standard_error=output_file))
 
         self.assertIn(non_existent_filename, output_file.getvalue())
 
     def test_in_place(self):
-        with temporary_file('''\
-if True:
-    x = "abc"
-''') as filename:
+        with temporary_file(dedent('''\
+            if True:
+                x = "abc"
+        ''')) as filename:
             output_file = io.StringIO()
             self.assertEqual(
                 unify._main(argv=['my_fake_program', '--in-place', filename],
                             standard_out=output_file,
                             standard_error=None),
-                None,
-            )
+                None)
+
             with open(filename) as f:
-                self.assertEqual('''\
-if True:
-    x = 'abc'
-''', f.read())
+                self.assertEqual(
+                    dedent('''\
+                        if True:
+                            x = 'abc'
+                    '''),
+                    f.read())
 
     def test_in_place_precedence_over_check_only(self):
-        with temporary_file('''\
-if True:
-    x = "abc"
-''') as filename:
+        with temporary_file(dedent('''\
+            if True:
+                x = "abc"
+        ''')) as filename:
             output_file = io.StringIO()
             self.assertEqual(
                 unify._main(argv=['my_fake_program',
@@ -301,23 +305,27 @@ if True:
                                   filename],
                             standard_out=output_file,
                             standard_error=None),
-                None,
-            )
+                None)
+
             with open(filename) as f:
-                self.assertEqual('''\
-if True:
-    x = 'abc'
-''', f.read())
+                self.assertEqual(
+                    dedent('''\
+                        if True:
+                            x = 'abc'
+                    '''),
+                    f.read())
 
     def test_ignore_hidden_directories(self):
         with temporary_directory() as directory:
             with temporary_directory(prefix='.',
                                      directory=directory) as inner_directory:
 
-                with temporary_file("""\
-if True:
-    x = "abc"
-""", directory=inner_directory):
+                with temporary_file(
+                        dedent("""\
+                            if True:
+                                x = "abc"
+                        """),
+                        directory=inner_directory):
 
                     output_file = io.StringIO()
                     self.assertEqual(
@@ -326,11 +334,9 @@ if True:
                                           directory],
                                     standard_out=output_file,
                                     standard_error=None),
-                        None,
-                    )
-                    self.assertEqual(
-                        '',
-                        output_file.getvalue().strip())
+                        None)
+
+                    self.assertEqual('', output_file.getvalue().strip())
 
 
 @contextlib.contextmanager

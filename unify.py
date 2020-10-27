@@ -175,6 +175,7 @@ def drop_escape_backslash(body):
     body = ''.join(splitted_body)
     return body
 
+
 class SimpleEscapeFstring(SimpleEscapeString):
     """
     F-string with one type of quote in body.
@@ -219,8 +220,7 @@ def _format_code(source):
         editable_string.reformat()
         token_string = editable_string.token
 
-        modified_tokens.append(
-            (token_type, token_string, start, end, line))
+        modified_tokens.append((token_type, token_string, start, end, line))
 
     return untokenize.untokenize(modified_tokens)
 
@@ -348,11 +348,14 @@ def _main(argv, standard_out, standard_error):
         name = filenames.pop(0)
         if args.recursive and os.path.isdir(name):
             for root, directories, children in os.walk(unicode(name)):
-                filenames += [os.path.join(root, f) for f in children
-                              if f.endswith('.py') and
-                              not f.startswith('.')]
-                directories[:] = [d for d in directories
-                                  if not d.startswith('.')]
+                filenames += [
+                    os.path.join(root, f) for f in children
+                    if f.endswith('.py') and not f.startswith('.')
+                ]
+
+                directories[:] = [
+                    d for d in directories if not d.startswith('.')
+                ]
         else:
             try:
                 if format_file(name, args=args, standard_out=standard_out):
