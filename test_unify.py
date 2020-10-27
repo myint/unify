@@ -21,128 +21,138 @@ import unify
 class TestUnitsSimpleString(unittest.TestCase):
 
     def test_preferred_single(self):
-        unify.rules['preferred_quote'] = "'"
+        rules = {'preferred_quote': "'"}
 
-        result = unify.format_code('"foo"')
+        result = unify.format_code('"foo"', rules)
         self.assertEqual(result, "'foo'")
 
-        result = unify.format_code('f"foo"')
+        result = unify.format_code('f"foo"', rules)
         self.assertEqual(result, "f'foo'")
 
-        result = unify.format_code('r"foo"')
+        result = unify.format_code('r"foo"', rules)
         self.assertEqual(result, "r'foo'")
 
-        result = unify.format_code('u"foo"')
+        result = unify.format_code('u"foo"', rules)
         self.assertEqual(result, "u'foo'")
 
-        result = unify.format_code('b"foo"')
+        result = unify.format_code('b"foo"', rules)
         self.assertEqual(result, "b'foo'")
 
     def test_preferred_double(self):
-        unify.rules['preferred_quote'] = '"'
+        rules = {'preferred_quote': '"'}
 
-        result = unify.format_code("'foo'")
+        result = unify.format_code("'foo'", rules)
         self.assertEqual(result, '"foo"')
 
-        result = unify.format_code("f'foo'")
+        result = unify.format_code("f'foo'", rules)
         self.assertEqual(result, 'f"foo"')
 
-        result = unify.format_code("r'foo'")
+        result = unify.format_code("r'foo'", rules)
         self.assertEqual(result, 'r"foo"')
 
-        result = unify.format_code("u'foo'")
+        result = unify.format_code("u'foo'", rules)
         self.assertEqual(result, 'u"foo"')
 
-        result = unify.format_code("b'foo'")
+        result = unify.format_code("b'foo'", rules)
         self.assertEqual(result, 'b"foo"')
 
     def test_keep_single(self):
-        unify.rules['preferred_quote'] = "'"
-        result = unify.format_code("'foo'")
+        rules = {'preferred_quote': "'"}
+        result = unify.format_code("'foo'", rules)
         self.assertEqual(result, "'foo'")
 
     def test_keep_double(self):
-        unify.rules['preferred_quote'] = '"'
-        result = unify.format_code('"foo"')
+        rules = {'preferred_quote':  '"'}
+        result = unify.format_code('"foo"', rules)
         self.assertEqual(result, '"foo"')
 
 
 class TestUnitsSimpleQuotedString(unittest.TestCase):
 
     def test_opposite(self):
-        unify.rules['preferred_quote'] = "'"
-        unify.rules['escape_simple'] = 'opposite'
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'opposite',
+        }
 
-        result = unify.format_code('''"foo's"''')
+        result = unify.format_code('''"foo's"''', rules)
         self.assertEqual(result, '''"foo's"''')
 
-        result = unify.format_code("""'foo"s'""")
+        result = unify.format_code("""'foo"s'""", rules)
         self.assertEqual(result, """'foo"s'""")
 
-        result = unify.format_code('''"foo\\"s"''')
+        result = unify.format_code('''"foo\\"s"''', rules)
         self.assertEqual(result, """'foo"s'""")
 
-        result = unify.format_code("""'foo\\'s'""")
+        result = unify.format_code("""'foo\\'s'""", rules)
         self.assertEqual(result, '''"foo's"''')
 
     def test_backslash(self):
-        unify.rules['preferred_quote'] = "'"
-        unify.rules['escape_simple'] = 'backslash'
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'backslash',
+        }
 
-        result = unify.format_code('''"foo's"''')
+        result = unify.format_code('''"foo's"''', rules)
         self.assertEqual(result, """'foo\\'s'""")
 
-        result = unify.format_code("""'foo"s'""")
+        result = unify.format_code("""'foo"s'""", rules)
         self.assertEqual(result, """'foo"s'""")
 
-        result = unify.format_code('''"foo\\"s"''')
+        result = unify.format_code('''"foo\\"s"''', rules)
         self.assertEqual(result, """'foo"s'""")
 
-        result = unify.format_code("""'foo\\'s'""")
+        result = unify.format_code("""'foo\\'s'""", rules)
         self.assertEqual(result, """'foo\\'s'""")
 
     def test_keep_unformatted(self):
-        unify.rules['preferred_quote'] = "'"
-        unify.rules['escape_simple'] = 'opposite'
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'opposite',
+        }
 
-        result = unify.format_code('''f"foo's{some_var}"''')
+        result = unify.format_code('''f"foo's{some_var}"''', rules)
         self.assertEqual(result, '''f"foo's{some_var}"''')
 
-        result = unify.format_code("""r'foo\\'s'""")
+        result = unify.format_code("""r'foo\\'s'""", rules)
         self.assertEqual(result, """r'foo\\'s'""")
 
     def test_backslash_train(self):
-        unify.rules['preferred_quote'] = "'"
-        unify.rules['escape_simple'] = 'opposite'
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'opposite',
+        }
 
-        result = unify.format_code('''"a'b\\'c\\\\'d\\\\\\'e\\\\\\\\'f"''')
+        result = unify.format_code('''"a'b\\'c\\\\'d\\\\\\'e\\\\\\\\'f"''',
+                                   rules)
+
         self.assertEqual(result, '''"a'b'c\\\\'d\\\\'e\\\\\\\\'f"''')
 
-        result = unify.format_code('''"\\'a"''')
+        result = unify.format_code('''"\\'a"''', rules)
         self.assertEqual(result, '''"'a"''')
 
-        result = unify.format_code('''"\\\\'a"''')
+        result = unify.format_code('''"\\\\'a"''', rules)
         self.assertEqual(result, '''"\\\\'a"''')
 
 
 class TestUnitsTripleQuote(unittest.TestCase):
 
     def test_no_change(self):
-        unify.rules['preferred_quote'] = "'"
+        rules = {'preferred_quote': "'"}
 
-        result = unify.format_code('''"""foo"""''')
+        result = unify.format_code('''"""foo"""''', rules)
         self.assertEqual(result, '''"""foo"""''')
 
-        result = unify.format_code('''f"""foo"""''')
+        result = unify.format_code('''f"""foo"""''', rules)
         self.assertEqual(result, '''f"""foo"""''')
 
-        result = unify.format_code('''r"""\\t"""''')
+        result = unify.format_code('''r"""\\t"""''', rules)
         self.assertEqual(result, '''r"""\\t"""''')
 
-        result = unify.format_code('''u"""foo"""''')
+        result = unify.format_code('''u"""foo"""''', rules)
         self.assertEqual(result, '''u"""foo"""''')
 
-        result = unify.format_code('''b"""foo"""''')
+        result = unify.format_code('''b"""foo"""''', rules)
         self.assertEqual(result, '''b"""foo"""''')
 
 
@@ -153,58 +163,59 @@ class TestUnitsCode(unittest.TestCase):
             self.assertEqual('latin-1', unify.detect_encoding(filename))
 
     def test_format_code(self):
-        unify.rules['preferred_quote'] = "'"
+        rules = {'preferred_quote': "'"}
 
         self.assertEqual("x = 'abc' \\\n'next'\n",
-                         unify.format_code('x = "abc" \\\n"next"\n'))
+                         unify.format_code('x = "abc" \\\n"next"\n', rules))
 
         self.assertEqual("x = f'abc' \\\nf'next'\n",
-                         unify.format_code('x = f"abc" \\\nf"next"\n'))
+                         unify.format_code('x = f"abc" \\\nf"next"\n', rules))
 
         self.assertEqual("x = u'abc' \\\nu'next'\n",
-                         unify.format_code('x = u"abc" \\\nu"next"\n'))
+                         unify.format_code('x = u"abc" \\\nu"next"\n', rules))
 
         self.assertEqual("x = b'abc' \\\nb'next'\n",
-                         unify.format_code('x = b"abc" \\\nb"next"\n'))
+                         unify.format_code('x = b"abc" \\\nb"next"\n', rules))
 
     def test_format_code_with_backslash_in_comment(self):
-        unify.rules['preferred_quote'] = "'"
+        rules = {'preferred_quote': "'"}
 
         self.assertEqual("x = 'abc' #\\\n'next'\n",
-                         unify.format_code('x = "abc" #\\\n"next"\n'))
+                         unify.format_code('x = "abc" #\\\n"next"\n', rules))
 
         self.assertEqual("x = f'abc' #\\\nf'next'\n",
-                         unify.format_code('x = f"abc" #\\\nf"next"\n'))
+                         unify.format_code('x = f"abc" #\\\nf"next"\n', rules))
 
         self.assertEqual("x = r'abc' #\\\nr'next'\n",
-                         unify.format_code('x = r"abc" #\\\nr"next"\n'))
+                         unify.format_code('x = r"abc" #\\\nr"next"\n', rules))
 
         self.assertEqual("x = r'abc' \\\nr'next'\n",
-                         unify.format_code('x = r"abc" \\\nr"next"\n'))
+                         unify.format_code('x = r"abc" \\\nr"next"\n', rules))
 
         self.assertEqual("x = u'abc' #\\\nu'next'\n",
-                         unify.format_code('x = u"abc" #\\\nu"next"\n'))
+                         unify.format_code('x = u"abc" #\\\nu"next"\n', rules))
 
         self.assertEqual("x = b'abc' #\\\nb'next'\n",
-                         unify.format_code('x = b"abc" #\\\nb"next"\n'))
+                         unify.format_code('x = b"abc" #\\\nb"next"\n', rules))
 
     def test_format_code_with_syntax_error(self):
-        unify.rules['preferred_quote'] = "'"
+        rules = {'preferred_quote': "'"}
 
         self.assertEqual('foo("abc"\n',
-                         unify.format_code('foo("abc"\n'))
+                         unify.format_code('foo("abc"\n', rules))
 
         self.assertEqual('foo(f"abc"\n',
-                         unify.format_code('foo(f"abc"\n'))
+                         unify.format_code('foo(f"abc"\n', rules))
 
         self.assertEqual('foo(r"Tabs \t, new lines \n."\n',
-                         unify.format_code('foo(r"Tabs \t, new lines \n."\n'))
+                         unify.format_code('foo(r"Tabs \t, new lines \n."\n',
+                                           rules))
 
         self.assertEqual('foo(u"abc"\n',
-                         unify.format_code('foo(u"abc"\n'))
+                         unify.format_code('foo(u"abc"\n', rules))
 
         self.assertEqual('foo(b"abc"\n',
-                         unify.format_code('foo(b"abc"\n'))
+                         unify.format_code('foo(b"abc"\n', rules))
 
 
 class TestSystem(unittest.TestCase):

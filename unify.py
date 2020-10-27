@@ -47,16 +47,12 @@ except NameError:
     unicode = str
 
 
-# dict with transform rules
-rules = {}
-
-
 class AbstractString:
     """Interface to transform strings."""
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def reformat(self): pass
+    def reformat(self, rules): pass
 
     @abstractproperty
     def token(self): pass
@@ -75,7 +71,7 @@ class ImmutableString(AbstractString):
     def __init__(self, body):
         self.body = body
 
-    def reformat(self): pass
+    def reformat(self, rules): pass
 
     @property
     def token(self):
@@ -100,7 +96,7 @@ class SimpleString(AbstractString):
         self.old_prefix = prefix
         self.old_quote = quote
 
-    def reformat(self):
+    def reformat(self, rules):
         preferred_quote = rules['preferred_quote']
         self.quote = preferred_quote
 
@@ -133,7 +129,7 @@ class SimpleEscapeString(AbstractString):
         self.old_quote = quote
         self.old_body = body
 
-    def reformat(self):
+    def reformat(self, rules):
         preferred_quote = rules['preferred_quote']
         escape_simple = rules['escape_simple']
         quote_in_body = "'" if "'" in self.body else '"'
@@ -184,25 +180,25 @@ class SimpleEscapeFstring(SimpleEscapeString):
     Use escape_simple and preferred_quote rules.
     """
 
-    def reformat(self):
+    def reformat(self, rules):
         if any(br in self.body for br in '{}'):
             # don't transform since can't use backslashes in bracket area
             # TODO add body parsing and handle this case
             return
 
         # can treat this case as simple escape
-        super().reformat()
+        super().reformat(rules)
 
 
-def format_code(source):
+def format_code(source, rules):
     """Return source code with quotes unified."""
     try:
-        return _format_code(source)
+        return _format_code(source, rules)
     except (tokenize.TokenError, IndentationError):
         return source
 
 
-def _format_code(source):
+def _format_code(source, rules):
     """Return source code with quotes unified."""
     if not source:
         return source
@@ -217,7 +213,7 @@ def _format_code(source):
          line) in tokenize.generate_tokens(sio.readline):
 
         editable_string = get_editable_string(token_type, token_string)
-        editable_string.reformat()
+        editable_string.reformat(rules)
         token_string = editable_string.token
 
         modified_tokens.append((token_type, token_string, start, end, line))
@@ -278,7 +274,7 @@ def detect_encoding(filename):
         return 'latin-1'
 
 
-def format_file(filename, args, standard_out):
+def format_file(filename, args, standard_out, rules):
     """Run format_code() on a file.
 
     Returns `True` if any changes are needed and they are not being done
@@ -288,7 +284,7 @@ def format_file(filename, args, standard_out):
     encoding = detect_encoding(filename)
     with open_with_encoding(filename, encoding=encoding) as input_file:
         source = input_file.read()
-        formatted_source = format_code(source)
+        formatted_source = format_code(source, rules)
 
     if source != formatted_source:
         if args.in_place:
@@ -339,8 +335,10 @@ def _main(argv, standard_out, standard_error):
 
     args = parser.parse_args(argv[1:])
 
-    rules['preferred_quote'] = args.quote
-    rules['escape_simple'] = args.escape_simple
+    rules = {
+        'preferred_quote': args.quote,
+        'escape_simple': args.escape_simple,
+    }
     filenames = list(set(args.files))
     changes_needed = False
     failure = False
@@ -358,7 +356,7 @@ def _main(argv, standard_out, standard_error):
                 ]
         else:
             try:
-                if format_file(name, args=args, standard_out=standard_out):
+                if format_file(name, args=args, standard_out=standard_out, rules=rules):
                     changes_needed = True
             except IOError as exception:
                 print(unicode(exception), file=standard_error)
