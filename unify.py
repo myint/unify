@@ -29,6 +29,7 @@ from __future__ import unicode_literals
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 import io
+from itertools import chain, count
 import os
 import re
 import signal
@@ -172,7 +173,7 @@ def drop_escape_backslash(body):
     return body
 
 
-class SimpleEscapeFstring(SimpleEscapeString):
+class SimpleEscapeFstring(AbstractString):
     """
     F-string with one type of quote in body.
 
@@ -180,14 +181,134 @@ class SimpleEscapeFstring(SimpleEscapeString):
     Use escape_simple and preferred_quote rules.
     """
 
+    def __init__(self, prefix, quote, body, parsed_body, expr_ids):
+        self.prefix = prefix
+        self.quote = quote
+        self.body = body
+        self.parsed_body = parsed_body
+        self.expr_ids = expr_ids
+        self.old_prefix = prefix
+        self.old_quote = quote
+        self.old_body = body
+
     def reformat(self, rules):
-        if any(br in self.body for br in '{}'):
-            # don't transform since can't use backslashes in bracket area
-            # TODO add body parsing and handle this case
+        # Not implemented yet
+        pass
+
+    @property
+    def token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.prefix, quote=self.quote, body=self.body
+        )
+
+    @property
+    def old_token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.old_prefix, quote=self.old_quote, body=self.old_body
+        )
+
+
+class FstringParser:
+    """Parse f-string to text and expression parts."""
+
+    def __init__(self, body):
+        self.body = body
+        self.parsed_body = None
+        self.expr_area_idx = None
+        self.texts = None
+        self.expressions = None
+        self.expression_ids = None
+
+    def parse(self):
+        expr_areas = self.find_expression_areas()
+        self._parse(expr_areas)
+        self._indexfy_parsed_body()
+
+    def _parse(self, expr_areas):
+        if not expr_areas:
+            self.parsed_body = [self.body]
             return
 
-        # can treat this case as simple escape
-        super().reformat(rules)
+        parsed_body = []
+        if expr_areas[0][0] != 0:
+            parsed_body.append(self.body[:expr_areas[0][0]])
+
+        next_areas = chain(expr_areas, [(len(self.body), None)])
+        next(next_areas)
+        for (cur_start, cur_end), (next_start, _) in zip(expr_areas, next_areas):
+            chunk = self.body[cur_start:cur_end]
+            parsed_body.append(chunk)
+            if cur_end != next_start:
+                chunk = self.body[cur_end:next_start]
+                parsed_body.append(chunk)
+        self.parsed_body = parsed_body
+
+    def find_expression_areas(self):
+        """
+        Work like state machine.
+
+        Has two states: outside expression area and inside it.
+        If outside it looks for opening brace, ensure that this is not escape brace and
+        switch to inside mode.
+        If inside it counts braces to search close pair. If found switch to outside mode.
+        Return list of numbers for slice.
+        """
+        expression_area = []
+        expr_area_mode = False
+        escape_mark = False
+        brace_count = 0
+        next_chars = chain(self.body, [None])
+        next(next_chars)
+        start_expr_area = None
+        for pos, cur_char, next_char in zip(count(), self.body, next_chars):
+            if not expr_area_mode:
+                if escape_mark:
+                    escape_mark = False
+                    continue
+                if cur_char == '{' and next_char == '{':
+                    escape_mark = True
+                    continue
+                if cur_char == '{':
+                    expr_area_mode = True
+                    start_expr_area = pos
+                    brace_count += 1
+            else:
+                if cur_char == '{':
+                    brace_count += 1
+                if cur_char == '}':
+                    brace_count -= 1
+                if cur_char == '}' and brace_count == 0:
+                    end_expr_area = pos + 1
+                    expression_area.append((start_expr_area,end_expr_area))
+                    expr_area_mode = False
+        return expression_area
+
+    def _indexfy_parsed_body(self):
+        re_expr = re.compile(r'{[^{].*[^}]}|{.}')
+        texts = []
+        expressions = []
+        expression_ids = []
+        for i, chunk in enumerate(self.parsed_body):
+            if re_expr.match(chunk):
+                expressions.append(chunk)
+                expression_ids.append(i)
+            else:
+                texts.append(chunk)
+        self.texts = texts
+        self.expressions = expressions
+        self.expression_ids = expression_ids
+
+    def text_has_single_quote(self):
+        return any("'" in tx for tx in self.texts)
+
+    def text_has_double_quote(self):
+        return any('"' in tx for tx in self.texts)
+
+    def expression_has_single_quote(self):
+        return any("'" in expr for expr in self.expressions)
+
+    def expression_has_double_quote(self):
+        return any('"' in expr for expr in self.expressions)
 
 
 def format_code(source, rules):
@@ -242,12 +363,30 @@ def get_editable_string(token_type, token_string):
         # don't transform raw string since can't use backslash
         # as escape char
         return ImmutableString(token_string)
+    if 'f' in parsed_string['prefix'].lower():
+        parser = FstringParser(parsed_string['body'])
+        parser.parse()
+        text_has_single = parser.text_has_single_quote()
+        text_has_double = parser.text_has_double_quote()
+        expression_has_single = parser.expression_has_single_quote()
+        expression_has_double = parser.expression_has_double_quote()
+
+        if text_has_single and text_has_double:
+            # don't transform complicated escape yet
+            return ImmutableString(token_string)
+        if text_has_single or text_has_double:
+            if not expression_has_single and expression_has_double:
+                # treat this case as simple string
+                return SimpleEscapeString(**parsed_string)
+            return SimpleEscapeFstring(
+                **parsed_string,
+                parsed_body=parser.parsed_body,
+                expr_ids=parser.expression_ids
+            )
     if all(qt in parsed_string['body'] for qt in ("'", '"')):
         # don't transform complicated escape yet
         return ImmutableString(token_string)
     if any(qt in parsed_string['body'] for qt in ("'", '"')):
-        if 'f' in parsed_string['prefix'].lower():
-            return SimpleEscapeFstring(**parsed_string)
         return SimpleEscapeString(**parsed_string)
     return ImmutableString(token_string)
 

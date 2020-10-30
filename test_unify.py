@@ -156,6 +156,62 @@ class TestUnitsTripleQuote(unittest.TestCase):
         self.assertEqual(result, '''b"""foo"""''')
 
 
+class TestFstringParser(unittest.TestCase):
+
+    def test_find_expression_areas(self):
+        cases = [
+            ('text', []),
+            ('{bcd}', [(0, 5)]),
+            ('{{not exp area}}', []),
+            ('{{{def}}}', [(2, 7)]),
+            ('{b}{e}', [(0, 3),(3, 6)]),
+            ('{bcd}}}', [(0, 5)]),
+            ('{{{def}', [(2, 7)]),
+        ]
+        for source, expected in cases:
+            with self.subTest(body=source):
+                parser = unify.FstringParser(source)
+                result = parser.find_expression_areas()
+                self.assertEqual(result, expected)
+
+    def test_parse(self):
+        cases = [
+            ('text', ['text']),
+            ('{bcd}', ['{bcd}']),
+            ('{{not exp area}}', ['{{not exp area}}']),
+            ('{{{def}}}', ['{{', '{def}', '}}']),
+            ('{b}{e}', ['{b}', '{e}']),
+            ('{bcd}}}', ['{bcd}', '}}']),
+            ('{{{def}', ['{{', '{def}']),
+            ('{b}d{f}', ['{b}', 'd', '{f}']),
+        ]
+        for source, expected in cases:
+            with self.subTest(body=source):
+                parser = unify.FstringParser(source)
+                parser.parse()
+                result = parser.parsed_body
+                self.assertEqual(result, expected)
+
+    def test_indexfy(self):
+        cases = [
+            ('text', ['text'], [], []),
+            ('{bcd}', [], ['{bcd}'], [0]),
+            ('{{not exp area}}', ['{{not exp area}}'], [], []),
+            ('{{{def}}}', ['{{', '}}'], ['{def}'],[1]),
+            ('{b}{e}', [], ['{b}', '{e}'], [0, 1]),
+            ('{bcd}}}', ['}}'], ['{bcd}'], [0]),
+            ('{{{def}', ['{{'], ['{def}'], [1]),
+            ('{b}d{f}', ['d'], ['{b}', '{f}'], [0, 2]),
+        ]
+        for source, expected_texts, expected_expr, expected_ids in cases:
+            with self.subTest(body=source):
+                parser = unify.FstringParser(source)
+                parser.parse()
+                self.assertEqual(parser.texts, expected_texts)
+                self.assertEqual(parser.expressions, expected_expr)
+                self.assertEqual(parser.expression_ids, expected_ids)
+
+
 class TestUnitsCode(unittest.TestCase):
 
     def test_detect_encoding_with_bad_encoding(self):
