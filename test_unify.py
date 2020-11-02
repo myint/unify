@@ -184,6 +184,9 @@ class TestFstringParser(unittest.TestCase):
             ('{bcd}}}', ['{bcd}', '}}']),
             ('{{{def}', ['{{', '{def}']),
             ('{b}d{f}', ['{b}', 'd', '{f}']),
+            ('{ {1} }', ['{ {1} }']),
+            ('{{1}}', ['{{1}}']),
+            ('{ {{1,2}.pop()} }', ['{ {{1,2}.pop()} }']),
         ]
         for source, expected in cases:
             with self.subTest(body=source):
@@ -202,6 +205,9 @@ class TestFstringParser(unittest.TestCase):
             ('{bcd}}}', ['}}'], ['{bcd}'], [0]),
             ('{{{def}', ['{{'], ['{def}'], [1]),
             ('{b}d{f}', ['d'], ['{b}', '{f}'], [0, 2]),
+            ('{ {1} }', [], ['{ {1} }'],[0]),
+            ('{{1}}', ['{{1}}'], [],[]),
+            ('{ {{1,2}.pop()} }', [], ['{ {{1,2}.pop()} }'], [0]),
         ]
         for source, expected_texts, expected_expr, expected_ids in cases:
             with self.subTest(body=source):
