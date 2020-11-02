@@ -87,7 +87,7 @@ class SimpleString(AbstractString):
     """
     String without quote in body.
 
-    Use prefered_quote rule.
+    Use preferred_quote rule.
     """
 
     def __init__(self, prefix, quote, body):
@@ -180,6 +180,7 @@ class SimpleEscapeFstring(AbstractString):
     Not fully implemented.
     Use escape_simple and preferred_quote rules.
     """
+    OPPOSITE_QUOTE = {"'": '"', '"': "'"}
 
     def __init__(self, prefix, quote, body, parsed_body, expr_ids):
         self.prefix = prefix
@@ -187,13 +188,97 @@ class SimpleEscapeFstring(AbstractString):
         self.body = body
         self.parsed_body = parsed_body
         self.expr_ids = expr_ids
+        self.text_ids = sorted(set(range(len(parsed_body))) - set(expr_ids))
+        self.expressions = [parsed_body[i] for i in expr_ids]
+        self.texts = [parsed_body[i] for i in self.text_ids]
         self.old_prefix = prefix
         self.old_quote = quote
         self.old_body = body
 
     def reformat(self, rules):
-        # Not implemented yet
-        pass
+        if rules['f_string_expression_quote'] == 'ignore': return
+
+        outer_quote, expr_quote = self._get_quotes(rules)
+
+        self.quote = outer_quote
+        self._update_texts(outer_quote)
+        self._update_expressions(expr_quote)
+        self.body = ''.join(self.parsed_body)
+
+    def _get_quotes(self, rules):
+        """
+        get quotes depending of rules and quotes in body.
+
+        If f_string_expression_quote is 'single' or 'double' then outer quote is
+        opposites.
+        If f_string_expression_quote is 'depended' it use table choices.
+        Keys to choose:
+            (preferred_quote, escape_simple, text_quote)
+
+        Return values:
+           (outer_quote, expr_quote)
+        """
+        escape_simple = rules['escape_simple']
+        f_string_expr_quote = rules['f_string_expression_quote']
+        if escape_simple == 'ignore':
+            return self.quote, self.OPPOSITE_QUOTE[self.quote]
+        if f_string_expr_quote == 'single':
+            return '"', "'"
+        if f_string_expr_quote == 'double':
+            return "'", '"'
+
+        if f_string_expr_quote == 'depended':
+            outer_quote_choices = {
+                ("'", 'opp', None): '"',
+                ("'", 'opp', "'"): '"',
+                ("'", 'opp', '"'): "'",
+                ("'", 'bs', None): "'",
+                ("'", 'bs', "'"): "'",
+                ("'", 'bs', '"'): "'",
+                ('"', 'opp', None): "'",
+                ('"', 'opp', "'"): '"',
+                ('"', 'opp', '"'): "'",
+                ('"', 'bs', None): '"',
+                ('"', 'bs', "'"): '"',
+                ('"', 'bs', '"'): '"',
+            }
+            preferred_qoute = rules['preferred_quote']
+            escape_simple = 'opp' if escape_simple == 'opposite' else 'bs'
+            text_qoute = self._find_text_quote()
+            key = (preferred_qoute, escape_simple, text_qoute)
+
+            outer_quote = outer_quote_choices[key]
+            expr_quote = self.OPPOSITE_QUOTE[outer_quote]
+            return outer_quote, expr_quote
+        return self.quote, self.OPPOSITE_QUOTE[self.quote]
+
+    def _update_texts(self, outer_quote):
+        quote_in_body = self._find_text_quote()
+        if quote_in_body is None: return
+
+        replace_quote = quote_in_body
+        if quote_in_body == outer_quote:
+            replace_quote = '\\' + replace_quote
+
+        for i in self.text_ids:
+            txt = self.parsed_body[i]
+            txt = drop_escape_backslash(txt)
+            txt = txt.replace(quote_in_body, replace_quote)
+            self.parsed_body[i] = txt
+
+    def _update_expressions(self, expr_quote):
+        for i in self.expr_ids:
+            expr = self.parsed_body[i]
+            expr = expr.replace("'", expr_quote).replace('"', expr_quote)
+            self.parsed_body[i] = expr
+
+    def _find_text_quote(self):
+        quote = None
+        if any("'" in txt for txt in self.texts):
+            quote = "'"
+        if any('"' in txt for txt in self.texts):
+            quote = '"'
+        return quote
 
     @property
     def token(self):
@@ -368,14 +453,14 @@ def get_editable_string(token_type, token_string):
         parser.parse()
         text_has_single = parser.text_has_single_quote()
         text_has_double = parser.text_has_double_quote()
-        expression_has_single = parser.expression_has_single_quote()
-        expression_has_double = parser.expression_has_double_quote()
 
         if text_has_single and text_has_double:
             # don't transform complicated escape yet
             return ImmutableString(token_string)
-        if text_has_single or text_has_double:
-            if not expression_has_single and expression_has_double:
+        else:
+            expression_has_single = parser.expression_has_single_quote()
+            expression_has_double = parser.expression_has_double_quote()
+            if not expression_has_single and not expression_has_double:
                 # treat this case as simple string
                 return SimpleEscapeString(**parsed_string)
             return SimpleEscapeFstring(
@@ -467,6 +552,10 @@ def _main(argv, standard_out, standard_error):
                         help='escape strategy if string has one type of quote',
                         choices=['opposite', 'backslash', 'ignore'],
                         default='opposite')
+    parser.add_argument('--f-string-expression-quote',
+                        help='quote inside expressions in f-string.',
+                        choices=['ignore', 'depended', 'single', 'double'],
+                        default='ignore')
     parser.add_argument('--version', action='version',
                         version='%(prog)s ' + __version__)
     parser.add_argument('files', nargs='+',
@@ -477,6 +566,7 @@ def _main(argv, standard_out, standard_error):
     rules = {
         'preferred_quote': args.quote,
         'escape_simple': args.escape_simple,
+        'f_string_expression_quote': args.f_string_expression_quote,
     }
     filenames = list(set(args.files))
     changes_needed = False

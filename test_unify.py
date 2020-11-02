@@ -110,10 +110,6 @@ class TestUnitsSimpleQuotedString(unittest.TestCase):
             'preferred_quote': "'",
             'escape_simple': 'opposite',
         }
-
-        result = unify.format_code('''f"foo's{some_var}"''', rules)
-        self.assertEqual(result, '''f"foo's{some_var}"''')
-
         result = unify.format_code("""r'foo\\'s'""", rules)
         self.assertEqual(result, """r'foo\\'s'""")
 
@@ -133,6 +129,105 @@ class TestUnitsSimpleQuotedString(unittest.TestCase):
 
         result = unify.format_code('''"\\\\'a"''', rules)
         self.assertEqual(result, '''"\\\\'a"''')
+
+
+class TestUnitsSimpleQuotedFstring(unittest.TestCase):
+
+    def test_no_quote_in_expression_area(self):
+        # don't add 'f_string_expression_quote' to ensure it's
+        # handled by SimpleQuotedString
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'opposite',
+        }
+        result = unify.format_code('''f"foo's{some_var}"''', rules)
+        self.assertEqual(result, '''f"foo's{some_var}"''')
+
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'backslash',
+        }
+        result = unify.format_code('''f"foo's{some_var}"''', rules)
+        self.assertEqual(result, """f'foo\\'s{some_var}'""")
+
+        rules = {
+            'preferred_quote': '"',
+            'escape_simple': 'opposite',
+        }
+        result = unify.format_code('''f"foo's{some_var}"''', rules)
+        self.assertEqual(result, '''f"foo's{some_var}"''')
+
+    def test_single_quote_in_expr_area(self):
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'opposite',
+            'f_string_expression_quote': 'single',
+        }
+        result = unify.format_code('''f"foo{some_dict['a']}"''', rules)
+        self.assertEqual(result, '''f"foo{some_dict['a']}"''')
+
+        result = unify.format_code('''f"foo's{some_dict['a']}"''', rules)
+        self.assertEqual(result, '''f"foo's{some_dict['a']}"''')
+
+        result = unify.format_code("""f'foo "name" {some_dict["a"]}'""", rules)
+        self.assertEqual(result, '''f"foo \\"name\\" {some_dict['a']}"''')
+
+    def test_double_quote_in_expr_area(self):
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'opposite',
+            'f_string_expression_quote': 'double',
+        }
+        result = unify.format_code("""f'foo{some_dict["a"]}'""", rules)
+        self.assertEqual(result, """f'foo{some_dict["a"]}'""")
+
+        result = unify.format_code("""f'foo "name" {some_dict["a"]}'""", rules)
+        self.assertEqual(result, """f'foo "name" {some_dict["a"]}'""")
+
+        result = unify.format_code('''f"foo's{some_dict['a']}"''', rules)
+        self.assertEqual(result, """f'foo\\'s{some_dict["a"]}'""")
+
+    def test_depended_opposite(self):
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'opposite',
+            'f_string_expression_quote': 'depended',
+        }
+        result = unify.format_code('''f"foo{some_dict['a']}"''', rules)
+        self.assertEqual(result, '''f"foo{some_dict['a']}"''')
+
+        result = unify.format_code("""f'foo{some_dict["a"]}'""", rules)
+        self.assertEqual(result, '''f"foo{some_dict['a']}"''')
+
+        result = unify.format_code('''f"foo's{some_dict['a']}"''', rules)
+        self.assertEqual(result, '''f"foo's{some_dict['a']}"''')
+
+        result = unify.format_code('''f"foo \\'name\\' {some_dict['a']}"''', rules)
+        self.assertEqual(result, '''f"foo 'name' {some_dict['a']}"''')
+
+        result = unify.format_code("""f'foo "name" {some_dict["a"]}'""", rules)
+        self.assertEqual(result, """f'foo "name" {some_dict["a"]}'""")
+
+    def test_depended_backskash(self):
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'backslash',
+            'f_string_expression_quote': 'depended',
+        }
+        result = unify.format_code('''f"foo{some_dict['a']}"''', rules)
+        self.assertEqual(result, """f'foo{some_dict["a"]}'""")
+
+        result = unify.format_code("""f'foo{some_dict["a"]}'""", rules)
+        self.assertEqual(result, """f'foo{some_dict["a"]}'""")
+
+        result = unify.format_code('''f"foo's{some_dict['a']}"''', rules)
+        self.assertEqual(result, """f'foo\\'s{some_dict["a"]}'""")
+
+        result = unify.format_code('''f"foo 'name' {some_dict['a']}"''', rules)
+        self.assertEqual(result, """f'foo \\'name\\' {some_dict["a"]}'""")
+
+        result = unify.format_code("""f'foo "name" {some_dict["a"]}'""", rules)
+        self.assertEqual(result, """f'foo "name" {some_dict["a"]}'""")
 
 
 class TestUnitsTripleQuote(unittest.TestCase):
