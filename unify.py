@@ -446,7 +446,19 @@ def get_editable_string(token_type, token_string):
         return SimpleString(**parsed_string)
     if 'r' in parsed_string['prefix'].lower():
         # don't transform raw string since can't use backslash
-        # as escape char
+        # as escape char.
+        # One exception is f-string with quote in expression area
+        if 'f' in parsed_string['prefix'].lower():
+            parser = FstringParser(parsed_string['body'])
+            parser.parse()
+            text_has_single = parser.text_has_single_quote()
+            text_has_double = parser.text_has_double_quote()
+            if not text_has_single and not text_has_double:
+                return SimpleEscapeFstring(
+                    **parsed_string,
+                    parsed_body=parser.parsed_body,
+                    expr_ids=parser.expression_ids
+                )
         return ImmutableString(token_string)
     if 'f' in parsed_string['prefix'].lower():
         parser = FstringParser(parsed_string['body'])

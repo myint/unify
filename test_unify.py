@@ -229,6 +229,29 @@ class TestUnitsSimpleQuotedFstring(unittest.TestCase):
         result = unify.format_code("""f'foo "name" {some_dict["a"]}'""", rules)
         self.assertEqual(result, """f'foo "name" {some_dict["a"]}'""")
 
+    def test_raw_string(self):
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'opposite',
+            'f_string_expression_quote': 'depended',
+        }
+        result = unify.format_code('''rf"foo{some_dict['a']}"''', rules)
+        self.assertEqual(result, '''rf"foo{some_dict['a']}"''')
+
+        result = unify.format_code("""rf'foo{some_dict["a"]}'""", rules)
+        self.assertEqual(result, '''rf"foo{some_dict['a']}"''')
+
+        rules = {
+            'preferred_quote': "'",
+            'escape_simple': 'backslash',
+            'f_string_expression_quote': 'depended',
+        }
+        result = unify.format_code('''rf"foo{some_dict['a']}"''', rules)
+        self.assertEqual(result, """rf'foo{some_dict["a"]}'""")
+
+        result = unify.format_code("""rf'foo{some_dict["a"]}'""", rules)
+        self.assertEqual(result, """rf'foo{some_dict["a"]}'""")
+
 
 class TestUnitsTripleQuote(unittest.TestCase):
 
