@@ -173,7 +173,7 @@ def drop_escape_backslash(body):
     return body
 
 
-class SimpleEscapeFstring(AbstractString):
+class SimpleEscapeFormatString(AbstractString):
     """
     F-string with one type of quote in body.
 
@@ -197,6 +197,7 @@ class SimpleEscapeFstring(AbstractString):
 
     def reformat(self, rules):
         if rules['f_string_expression_quote'] == 'ignore': return
+        if rules['escape_simple'] == 'ignore': return
 
         outer_quote, expr_quote = self._get_quotes(rules)
 
@@ -218,10 +219,7 @@ class SimpleEscapeFstring(AbstractString):
         Return values:
            (outer_quote, expr_quote)
         """
-        escape_simple = rules['escape_simple']
         f_string_expr_quote = rules['f_string_expression_quote']
-        if escape_simple == 'ignore':
-            return self.quote, self.OPPOSITE_QUOTE[self.quote]
         if f_string_expr_quote == 'single':
             return '"', "'"
         if f_string_expr_quote == 'double':
@@ -243,6 +241,7 @@ class SimpleEscapeFstring(AbstractString):
                 ('"', 'bs', '"'): '"',
             }
             preferred_qoute = rules['preferred_quote']
+            escape_simple = rules['escape_simple']
             escape_simple = 'opp' if escape_simple == 'opposite' else 'bs'
             text_qoute = self._find_text_quote()
             key = (preferred_qoute, escape_simple, text_qoute)
@@ -299,7 +298,6 @@ class FstringParser:
     def __init__(self, body):
         self.body = body
         self.parsed_body = None
-        self.expr_area_idx = None
         self.texts = None
         self.expressions = None
         self.expression_ids = None
@@ -364,7 +362,7 @@ class FstringParser:
                     brace_count -= 1
                 if cur_char == '}' and brace_count == 0:
                     end_expr_area = pos + 1
-                    expression_area.append((start_expr_area,end_expr_area))
+                    expression_area.append((start_expr_area, end_expr_area))
                     expr_area_mode = False
         return expression_area
 
@@ -454,7 +452,7 @@ def get_editable_string(token_type, token_string):
             text_has_single = parser.text_has_single_quote()
             text_has_double = parser.text_has_double_quote()
             if not text_has_single and not text_has_double:
-                return SimpleEscapeFstring(
+                return SimpleEscapeFormatString(
                     **parsed_string,
                     parsed_body=parser.parsed_body,
                     expr_ids=parser.expression_ids
@@ -469,17 +467,15 @@ def get_editable_string(token_type, token_string):
         if text_has_single and text_has_double:
             # don't transform complicated escape yet
             return ImmutableString(token_string)
-        else:
-            expression_has_single = parser.expression_has_single_quote()
-            expression_has_double = parser.expression_has_double_quote()
-            if not expression_has_single and not expression_has_double:
-                # treat this case as simple string
-                return SimpleEscapeString(**parsed_string)
-            return SimpleEscapeFstring(
-                **parsed_string,
-                parsed_body=parser.parsed_body,
-                expr_ids=parser.expression_ids
-            )
+        expression_has_single = parser.expression_has_single_quote()
+        expression_has_double = parser.expression_has_double_quote()
+        if not expression_has_single and not expression_has_double:
+            # treat this case as simple string
+            return SimpleEscapeString(**parsed_string)
+        params = parsed_string.copy()
+        params['parsed_body'] = parser.parsed_body
+        params['expr_ids'] = parser.expression_ids
+        return SimpleEscapeFormatString(**params)
     if all(qt in parsed_string['body'] for qt in ("'", '"')):
         # don't transform complicated escape yet
         return ImmutableString(token_string)
@@ -567,10 +563,10 @@ def _main(argv, standard_out, standard_error):
     parser.add_argument('--f-string-expression-quote',
                         help='quote inside expressions in f-string.',
                         choices=['ignore', 'depended', 'single', 'double'],
-                        default='ignore')
+                        default='depended')
     parser.add_argument('--version', action='version',
                         version='%(prog)s ' + __version__)
-    parser.add_argument('files', nargs='+',
+    parser.add_argument('files', nargs='+', metavar='file',
                         help='files to format')
 
     args = parser.parse_args(argv[1:])

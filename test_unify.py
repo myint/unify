@@ -131,7 +131,7 @@ class TestUnitsSimpleQuotedString(unittest.TestCase):
         self.assertEqual(result, '''"\\\\'a"''')
 
 
-class TestUnitsSimpleQuotedFstring(unittest.TestCase):
+class TestUnitsSimpleQuotedFormatString(unittest.TestCase):
 
     def test_no_quote_in_expression_area(self):
         # don't add 'f_string_expression_quote' to ensure it's
@@ -282,7 +282,7 @@ class TestFstringParser(unittest.TestCase):
             ('{bcd}', [(0, 5)]),
             ('{{not exp area}}', []),
             ('{{{def}}}', [(2, 7)]),
-            ('{b}{e}', [(0, 3),(3, 6)]),
+            ('{b}{e}', [(0, 3), (3, 6)]),
             ('{bcd}}}', [(0, 5)]),
             ('{{{def}', [(2, 7)]),
         ]
@@ -318,13 +318,13 @@ class TestFstringParser(unittest.TestCase):
             ('text', ['text'], [], []),
             ('{bcd}', [], ['{bcd}'], [0]),
             ('{{not exp area}}', ['{{not exp area}}'], [], []),
-            ('{{{def}}}', ['{{', '}}'], ['{def}'],[1]),
+            ('{{{def}}}', ['{{', '}}'], ['{def}'], [1]),
             ('{b}{e}', [], ['{b}', '{e}'], [0, 1]),
             ('{bcd}}}', ['}}'], ['{bcd}'], [0]),
             ('{{{def}', ['{{'], ['{def}'], [1]),
             ('{b}d{f}', ['d'], ['{b}', '{f}'], [0, 2]),
-            ('{ {1} }', [], ['{ {1} }'],[0]),
-            ('{{1}}', ['{{1}}'], [],[]),
+            ('{ {1} }', [], ['{ {1} }'], [0]),
+            ('{{1}}', ['{{1}}'], [], []),
             ('{ {{1,2}.pop()} }', [], ['{ {{1,2}.pop()} }'], [0]),
         ]
         for source, expected_texts, expected_expr, expected_ids in cases:
