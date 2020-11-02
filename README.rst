@@ -20,12 +20,16 @@ this code
 
 .. code-block:: python
 
-    x = "abc"
-    y = 'hello'
+    a = "abc"
+    b = 'hello'
+    c = 'this \' is quote'
+    d = 'this " is another quote'
 
 gets formatted into this
 
 .. code-block:: python
 
-    x = 'abc'
-    y = 'hello'
+    a = 'abc'
+    b = 'hello'
+    c= "this ' is quote"
+    d = 'this " is another quote'
