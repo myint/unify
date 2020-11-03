@@ -9,12 +9,7 @@ import io
 import sys
 import tempfile
 from textwrap import dedent
-
-try:
-    # Python 2.6
-    import unittest2 as unittest
-except ImportError:
-    import unittest
+import unittest
 
 import unify
 
