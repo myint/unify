@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 
 import contextlib
 import io
+import sys
 import tempfile
 from textwrap import dedent
 
@@ -131,6 +132,7 @@ class TestUnitsSimpleQuotedString(unittest.TestCase):
         self.assertEqual(result, '''"\\\\'a"''')
 
 
+@unittest.skipIf(sys.version_info < (3, 6), 'Low python version')
 class TestUnitsSimpleQuotedFormatString(unittest.TestCase):
 
     def test_no_quote_in_expression_area(self):
@@ -274,6 +276,7 @@ class TestUnitsTripleQuote(unittest.TestCase):
         self.assertEqual(result, '''b"""foo"""''')
 
 
+@unittest.skipIf(sys.version_info < (3, 6), 'Low python version')
 class TestFstringParser(unittest.TestCase):
 
     def test_find_expression_areas(self):

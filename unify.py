@@ -452,11 +452,10 @@ def get_editable_string(token_type, token_string):
             text_has_single = parser.text_has_single_quote()
             text_has_double = parser.text_has_double_quote()
             if not text_has_single and not text_has_double:
-                return SimpleEscapeFormatString(
-                    **parsed_string,
-                    parsed_body=parser.parsed_body,
-                    expr_ids=parser.expression_ids
-                )
+                params = parsed_string.copy()
+                params['parsed_body'] = parser.parsed_body
+                params['expr_ids'] = parser.expression_ids
+                return SimpleEscapeFormatString(**params)
         return ImmutableString(token_string)
     if 'f' in parsed_string['prefix'].lower():
         parser = FstringParser(parsed_string['body'])
