@@ -27,8 +27,11 @@
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from abc import ABCMeta, abstractmethod, abstractproperty
 import io
+from itertools import chain, count
 import os
+import re
 import signal
 import sys
 import tokenize
@@ -45,15 +48,361 @@ except NameError:
     unicode = str
 
 
-def format_code(source, preferred_quote="'"):
+class AbstractString:
+    """Interface to transform strings."""
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def reformat(self, rules): pass
+
+    @abstractproperty
+    def token(self): pass
+
+    @abstractproperty
+    def old_token(self): pass
+
+
+class ImmutableString(AbstractString):
+    """
+    Null object.
+
+    Don't transform string.
+    """
+
+    def __init__(self, body):
+        self.body = body
+
+    def reformat(self, rules): pass
+
+    @property
+    def token(self):
+        return self.body
+
+    @property
+    def old_token(self):
+        return self.body
+
+
+class SimpleString(AbstractString):
+    """
+    String without quote in body.
+
+    Use preferred_quote rule.
+    """
+
+    def __init__(self, prefix, quote, body):
+        self.prefix = prefix
+        self.quote = quote
+        self.body = body
+        self.old_prefix = prefix
+        self.old_quote = quote
+
+    def reformat(self, rules):
+        preferred_quote = rules['preferred_quote']
+        self.quote = preferred_quote
+
+    @property
+    def token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.prefix, quote=self.quote, body=self.body
+        )
+
+    @property
+    def old_token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.old_prefix, quote=self.old_quote, body=self.body
+        )
+
+
+class SimpleEscapeString(AbstractString):
+    """
+    String with one type of quote in body.
+
+    Use escape_simple and preferred_quote rules.
+    """
+    OPPOSITE_QUOTE = {"'": '"', '"': "'"}
+
+    def __init__(self, prefix, quote, body):
+        self.prefix = prefix
+        self.quote = quote
+        self.body = body
+        self.old_prefix = prefix
+        self.old_quote = quote
+        self.old_body = body
+
+    def reformat(self, rules):
+        preferred_quote = rules['preferred_quote']
+        escape_simple = rules['escape_simple']
+        quote_in_body = "'" if "'" in self.body else '"'
+
+        if escape_simple == 'ignore': return
+
+        body = drop_escape_backslash(self.body)
+        if escape_simple == 'opposite':
+            self.quote = self.OPPOSITE_QUOTE[quote_in_body]
+        else:
+            self.quote = preferred_quote
+            if preferred_quote == quote_in_body:
+                body = body.replace(quote_in_body, '\\' + quote_in_body)
+        self.body = body
+
+    @property
+    def token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.prefix, quote=self.quote, body=self.body
+        )
+
+    @property
+    def old_token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.old_prefix, quote=self.old_quote, body=self.old_body
+        )
+
+
+def drop_escape_backslash(body):
+    bs_pattern = '(\\\\+[\'"])'
+    splitted_body = re.split(bs_pattern, body)
+
+    def _drop_escape_bs(string):
+        if string.startswith('\\') and len(string) % 2 == 0:
+            string = string[1:]
+        return string
+
+    splitted_body = [_drop_escape_bs(chunk) for chunk in splitted_body]
+    body = ''.join(splitted_body)
+    return body
+
+
+class SimpleEscapeFormatString(AbstractString):
+    """
+    F-string with one type of quote in body.
+
+    Not fully implemented.
+    Use escape_simple and preferred_quote rules.
+    """
+    OPPOSITE_QUOTE = {"'": '"', '"': "'"}
+
+    def __init__(self, prefix, quote, body, parsed_body, expr_ids):
+        self.prefix = prefix
+        self.quote = quote
+        self.body = body
+        self.parsed_body = parsed_body
+        self.expr_ids = expr_ids
+        self.text_ids = sorted(set(range(len(parsed_body))) - set(expr_ids))
+        self.expressions = [parsed_body[i] for i in expr_ids]
+        self.texts = [parsed_body[i] for i in self.text_ids]
+        self.old_prefix = prefix
+        self.old_quote = quote
+        self.old_body = body
+
+    def reformat(self, rules):
+        if rules['f_string_expression_quote'] == 'ignore': return
+        if rules['escape_simple'] == 'ignore': return
+
+        outer_quote, expr_quote = self._get_quotes(rules)
+
+        self.quote = outer_quote
+        self._update_texts(outer_quote)
+        self._update_expressions(expr_quote)
+        self.body = ''.join(self.parsed_body)
+
+    def _get_quotes(self, rules):
+        """
+        get quotes depending of rules and quotes in body.
+
+        If f_string_expression_quote is 'single' or 'double' then outer quote is
+        opposites.
+        If f_string_expression_quote is 'depended' it use table choices.
+        Keys to choose:
+            (preferred_quote, escape_simple, text_quote)
+
+        Return values:
+           (outer_quote, expr_quote)
+        """
+        f_string_expr_quote = rules['f_string_expression_quote']
+        if f_string_expr_quote == 'single':
+            return '"', "'"
+        if f_string_expr_quote == 'double':
+            return "'", '"'
+
+        if f_string_expr_quote == 'depended':
+            outer_quote_choices = {
+                ("'", 'opp', None): '"',
+                ("'", 'opp', "'"): '"',
+                ("'", 'opp', '"'): "'",
+                ("'", 'bs', None): "'",
+                ("'", 'bs', "'"): "'",
+                ("'", 'bs', '"'): "'",
+                ('"', 'opp', None): "'",
+                ('"', 'opp', "'"): '"',
+                ('"', 'opp', '"'): "'",
+                ('"', 'bs', None): '"',
+                ('"', 'bs', "'"): '"',
+                ('"', 'bs', '"'): '"',
+            }
+            preferred_qoute = rules['preferred_quote']
+            escape_simple = rules['escape_simple']
+            escape_simple = 'opp' if escape_simple == 'opposite' else 'bs'
+            text_qoute = self._find_text_quote()
+            key = (preferred_qoute, escape_simple, text_qoute)
+
+            outer_quote = outer_quote_choices[key]
+            expr_quote = self.OPPOSITE_QUOTE[outer_quote]
+            return outer_quote, expr_quote
+        return self.quote, self.OPPOSITE_QUOTE[self.quote]
+
+    def _update_texts(self, outer_quote):
+        quote_in_body = self._find_text_quote()
+        if quote_in_body is None: return
+
+        replace_quote = quote_in_body
+        if quote_in_body == outer_quote:
+            replace_quote = '\\' + replace_quote
+
+        for i in self.text_ids:
+            txt = self.parsed_body[i]
+            txt = drop_escape_backslash(txt)
+            txt = txt.replace(quote_in_body, replace_quote)
+            self.parsed_body[i] = txt
+
+    def _update_expressions(self, expr_quote):
+        for i in self.expr_ids:
+            expr = self.parsed_body[i]
+            expr = expr.replace("'", expr_quote).replace('"', expr_quote)
+            self.parsed_body[i] = expr
+
+    def _find_text_quote(self):
+        quote = None
+        if any("'" in txt for txt in self.texts):
+            quote = "'"
+        if any('"' in txt for txt in self.texts):
+            quote = '"'
+        return quote
+
+    @property
+    def token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.prefix, quote=self.quote, body=self.body
+        )
+
+    @property
+    def old_token(self):
+        return '{prefix}{quote}{body}{quote}'.format(
+            prefix=self.old_prefix, quote=self.old_quote, body=self.old_body
+        )
+
+
+class FstringParser:
+    """Parse f-string to text and expression parts."""
+
+    def __init__(self, body):
+        self.body = body
+        self.parsed_body = None
+        self.texts = None
+        self.expressions = None
+        self.expression_ids = None
+
+    def parse(self):
+        expr_areas = self.find_expression_areas()
+        self._parse(expr_areas)
+        self._indexfy_parsed_body()
+
+    def _parse(self, expr_areas):
+        if not expr_areas:
+            self.parsed_body = [self.body]
+            return
+
+        parsed_body = []
+        if expr_areas[0][0] != 0:
+            parsed_body.append(self.body[:expr_areas[0][0]])
+
+        next_areas = chain(expr_areas, [(len(self.body), None)])
+        next(next_areas)
+        for (cur_start, cur_end), (next_start, _) in zip(expr_areas, next_areas):
+            chunk = self.body[cur_start:cur_end]
+            parsed_body.append(chunk)
+            if cur_end != next_start:
+                chunk = self.body[cur_end:next_start]
+                parsed_body.append(chunk)
+        self.parsed_body = parsed_body
+
+    def find_expression_areas(self):
+        """
+        Work like state machine.
+
+        Has two states: outside expression area and inside it.
+        If outside it looks for opening brace, ensure that this is not escape brace and
+        switch to inside mode.
+        If inside it counts braces to search close pair. If found switch to outside mode.
+        Return list of numbers for slice.
+        """
+        expression_area = []
+        expr_area_mode = False
+        escape_mark = False
+        brace_count = 0
+        next_chars = chain(self.body, [None])
+        next(next_chars)
+        start_expr_area = None
+        for pos, cur_char, next_char in zip(count(), self.body, next_chars):
+            if not expr_area_mode:
+                if escape_mark:
+                    escape_mark = False
+                    continue
+                if cur_char == '{' and next_char == '{':
+                    escape_mark = True
+                    continue
+                if cur_char == '{':
+                    expr_area_mode = True
+                    start_expr_area = pos
+                    brace_count += 1
+            else:
+                if cur_char == '{':
+                    brace_count += 1
+                if cur_char == '}':
+                    brace_count -= 1
+                if cur_char == '}' and brace_count == 0:
+                    end_expr_area = pos + 1
+                    expression_area.append((start_expr_area, end_expr_area))
+                    expr_area_mode = False
+        return expression_area
+
+    def _indexfy_parsed_body(self):
+        re_expr = re.compile(r'{[^{].*[^}]}|{.}')
+        texts = []
+        expressions = []
+        expression_ids = []
+        for i, chunk in enumerate(self.parsed_body):
+            if re_expr.match(chunk):
+                expressions.append(chunk)
+                expression_ids.append(i)
+            else:
+                texts.append(chunk)
+        self.texts = texts
+        self.expressions = expressions
+        self.expression_ids = expression_ids
+
+    def text_has_single_quote(self):
+        return any("'" in tx for tx in self.texts)
+
+    def text_has_double_quote(self):
+        return any('"' in tx for tx in self.texts)
+
+    def expression_has_single_quote(self):
+        return any("'" in expr for expr in self.expressions)
+
+    def expression_has_double_quote(self):
+        return any('"' in expr for expr in self.expressions)
+
+
+def format_code(source, rules):
     """Return source code with quotes unified."""
     try:
-        return _format_code(source, preferred_quote)
+        return _format_code(source, rules)
     except (tokenize.TokenError, IndentationError):
         return source
 
 
-def _format_code(source, preferred_quote):
+def _format_code(source, rules):
     """Return source code with quotes unified."""
     if not source:
         return source
@@ -67,49 +416,71 @@ def _format_code(source, preferred_quote):
          end,
          line) in tokenize.generate_tokens(sio.readline):
 
-        if token_type == tokenize.STRING:
-            token_string = unify_quotes(token_string,
-                                        preferred_quote=preferred_quote)
+        editable_string = get_editable_string(token_type, token_string)
+        editable_string.reformat(rules)
+        token_string = editable_string.token
 
-        modified_tokens.append(
-            (token_type, token_string, start, end, line))
+        modified_tokens.append((token_type, token_string, start, end, line))
 
     return untokenize.untokenize(modified_tokens)
 
 
-def unify_quotes(token_string, preferred_quote):
-    """Return string with quotes changed to preferred_quote if possible."""
-    bad_quote = {'"': "'",
-                 "'": '"'}[preferred_quote]
+def get_editable_string(token_type, token_string):
+    """dispatcher function."""
+    if token_type != tokenize.STRING:
+        return ImmutableString(token_string)
 
-    allowed_starts = {
-        '': bad_quote,
-        'f': 'f' + bad_quote,
-        'r': 'r' + bad_quote,
-        'u': 'u' + bad_quote,
-        'b': 'b' + bad_quote
-    }
+    string_pattern = r'''(?P<prefix>[rubf]*)(?P<quote>['"]{3}|['"])(?P<body>.*)(?P=quote)'''
+    m = re.match(string_pattern, token_string, re.I | re.S)
 
-    if not any(token_string.startswith(start)
-               for start in allowed_starts.values()):
-        return token_string
+    if not m:
+        return ImmutableString(token_string)
 
-    if token_string.count(bad_quote) != 2:
-        return token_string
+    parsed_string = m.groupdict()
 
-    if preferred_quote in token_string:
-        return token_string
+    if parsed_string['quote'] in ('"""', "'''"):
+        return ImmutableString(token_string)
+    if all(qt not in parsed_string['body'] for qt in ("'", '"')):
+        return SimpleString(**parsed_string)
+    if 'r' in parsed_string['prefix'].lower():
+        # don't transform raw string since can't use backslash
+        # as escape char.
+        # One exception is f-string with quote in expression area
+        if 'f' in parsed_string['prefix'].lower():
+            parser = FstringParser(parsed_string['body'])
+            parser.parse()
+            text_has_single = parser.text_has_single_quote()
+            text_has_double = parser.text_has_double_quote()
+            if not text_has_single and not text_has_double:
+                params = parsed_string.copy()
+                params['parsed_body'] = parser.parsed_body
+                params['expr_ids'] = parser.expression_ids
+                return SimpleEscapeFormatString(**params)
+        return ImmutableString(token_string)
+    if 'f' in parsed_string['prefix'].lower():
+        parser = FstringParser(parsed_string['body'])
+        parser.parse()
+        text_has_single = parser.text_has_single_quote()
+        text_has_double = parser.text_has_double_quote()
 
-    assert token_string.endswith(bad_quote)
-    assert len(token_string) >= 2
-    for prefix, start in allowed_starts.items():
-        if token_string.startswith(start):
-            chars_to_strip_from_front = len(start)
-            return '{prefix}{preferred_quote}{token}{preferred_quote}'.format(
-                prefix=prefix,
-                preferred_quote=preferred_quote,
-                token=token_string[chars_to_strip_from_front:-1]
-            )
+        if text_has_single and text_has_double:
+            # don't transform complicated escape yet
+            return ImmutableString(token_string)
+        expression_has_single = parser.expression_has_single_quote()
+        expression_has_double = parser.expression_has_double_quote()
+        if not expression_has_single and not expression_has_double:
+            # treat this case as simple string
+            return SimpleEscapeString(**parsed_string)
+        params = parsed_string.copy()
+        params['parsed_body'] = parser.parsed_body
+        params['expr_ids'] = parser.expression_ids
+        return SimpleEscapeFormatString(**params)
+    if all(qt in parsed_string['body'] for qt in ("'", '"')):
+        # don't transform complicated escape yet
+        return ImmutableString(token_string)
+    if any(qt in parsed_string['body'] for qt in ("'", '"')):
+        return SimpleEscapeString(**parsed_string)
+    return ImmutableString(token_string)
 
 
 def open_with_encoding(filename, encoding, mode='r'):
@@ -134,7 +505,7 @@ def detect_encoding(filename):
         return 'latin-1'
 
 
-def format_file(filename, args, standard_out):
+def format_file(filename, args, standard_out, rules):
     """Run format_code() on a file.
 
     Returns `True` if any changes are needed and they are not being done
@@ -144,9 +515,7 @@ def format_file(filename, args, standard_out):
     encoding = detect_encoding(filename)
     with open_with_encoding(filename, encoding=encoding) as input_file:
         source = input_file.read()
-        formatted_source = format_code(
-            source,
-            preferred_quote=args.quote)
+        formatted_source = format_code(source, rules)
 
     if source != formatted_source:
         if args.in_place:
@@ -186,13 +555,26 @@ def _main(argv, standard_out, standard_error):
                         help='drill down directories recursively')
     parser.add_argument('--quote', help='preferred quote', choices=["'", '"'],
                         default="'")
+    parser.add_argument('--escape-simple',
+                        help='escape strategy if string has one type of quote',
+                        choices=['opposite', 'backslash', 'ignore'],
+                        default='opposite')
+    parser.add_argument('--f-string-expression-quote',
+                        help='quote inside expressions in f-string.',
+                        choices=['ignore', 'depended', 'single', 'double'],
+                        default='depended')
     parser.add_argument('--version', action='version',
                         version='%(prog)s ' + __version__)
-    parser.add_argument('files', nargs='+',
+    parser.add_argument('files', nargs='+', metavar='file',
                         help='files to format')
 
     args = parser.parse_args(argv[1:])
 
+    rules = {
+        'preferred_quote': args.quote,
+        'escape_simple': args.escape_simple,
+        'f_string_expression_quote': args.f_string_expression_quote,
+    }
     filenames = list(set(args.files))
     changes_needed = False
     failure = False
@@ -200,14 +582,17 @@ def _main(argv, standard_out, standard_error):
         name = filenames.pop(0)
         if args.recursive and os.path.isdir(name):
             for root, directories, children in os.walk(unicode(name)):
-                filenames += [os.path.join(root, f) for f in children
-                              if f.endswith('.py') and
-                              not f.startswith('.')]
-                directories[:] = [d for d in directories
-                                  if not d.startswith('.')]
+                filenames += [
+                    os.path.join(root, f) for f in children
+                    if f.endswith('.py') and not f.startswith('.')
+                ]
+
+                directories[:] = [
+                    d for d in directories if not d.startswith('.')
+                ]
         else:
             try:
-                if format_file(name, args=args, standard_out=standard_out):
+                if format_file(name, args=args, standard_out=standard_out, rules=rules):
                     changes_needed = True
             except IOError as exception:
                 print(unicode(exception), file=standard_error)
