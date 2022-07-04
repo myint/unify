@@ -9,6 +9,12 @@ unify
 Modifies strings to all use the same quote where possible.
 
 
+Install
+=======
+::
+
+    $ pip install unify
+
 Example
 =======
 
@@ -29,3 +35,10 @@ gets formatted into this
 
     x = 'abc'
     y = 'hello'
+
+Tip
+=======
+
+Run on all python files in Git version control::
+
+    $ unify --in-place $(git ls-files '*.py')
